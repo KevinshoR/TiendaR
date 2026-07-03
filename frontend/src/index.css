@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/*
+ * Identidad visual de CatalogApp
+ * Fondo claro, tinta casi-negra suavizada, CTA esmeralda.
+ */
+@theme {
+  --color-tinta: #161616;      /* navbar, botones, texto principal */
+  --color-humo: #F7F7F5;       /* fondo de página */
+  --color-ceniza: #6B6B6B;     /* texto secundario */
+  --color-borde: #E8E8E4;      /* bordes suaves */
+  --color-esmeralda: #00C896;  /* CTA principal (vender, comprar) */
+
+  --font-display: "Sora", sans-serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+body {
+  background-color: var(--color-humo);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+}
