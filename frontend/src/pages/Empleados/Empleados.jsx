@@ -7,7 +7,7 @@ const VACIO = { name: '', email: '', password: '', role: 'empleado' }
 const ROL = {
   owner: { label: 'Dueño', cls: 'bg-tinta text-white' },
   empleado: { label: 'Empleado', cls: 'bg-esmeralda/15 text-esmeralda' },
-  contador: { label: 'Contador', cls: 'bg-blue-100 text-blue-700' },
+  contador: { label: 'Contador', cls: 'bg-humo text-tinta border border-borde' },
 }
 
 function Empleados() {
@@ -84,7 +84,7 @@ function Empleados() {
                   <td className="px-5 py-3 text-ceniza">{u.email}</td>
                   <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${rol.cls}`}>{rol.label}</span></td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs font-bold ${u.active ? 'text-esmeralda' : 'text-red-500'}`}>{u.active ? 'Activo' : 'Desactivado'}</span>
+                    <span className={`text-xs font-bold ${u.active ? 'text-esmeralda' : 'text-red-600'}`}>{u.active ? 'Activo' : 'Desactivado'}</span>
                   </td>
                   <td className="px-5 py-3 text-right">
                     {u.role !== 'owner' && (

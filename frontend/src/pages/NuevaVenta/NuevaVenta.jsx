@@ -156,7 +156,7 @@ function NuevaVenta() {
                   <button onClick={() => cambiar(product.id, -1)} className="rounded-lg bg-white p-1.5 text-tinta hover:bg-borde"><Minus size={13} /></button>
                   <span className="w-6 text-center text-sm font-bold">{quantity}</span>
                   <button onClick={() => cambiar(product.id, 1)} className="rounded-lg bg-white p-1.5 text-tinta hover:bg-borde"><Plus size={13} /></button>
-                  <button onClick={() => setCart(cart.filter((c) => c.product.id !== product.id))} className="ml-1 p-1 text-ceniza hover:text-red-500"><Trash2 size={14} /></button>
+                  <button onClick={() => setCart(cart.filter((c) => c.product.id !== product.id))} className="ml-1 p-1 text-ceniza hover:text-red-600"><Trash2 size={14} /></button>
                 </div>
               ))}
             </div>

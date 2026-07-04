@@ -102,7 +102,9 @@ async function create(req, res) {
       }
 
       const unitPrice = Number(product.price);
-      const ivaRate = store.iva_enabled && product.apply_iva ? Number(store.iva_rate) : 0;
+      const ivaRate = store.iva_enabled && product.apply_iva
+        ? Number(product.iva_rate !== null && product.iva_rate !== undefined ? product.iva_rate : store.iva_rate)
+        : 0;
       const itemSubtotal = round2(Number(quantity) * unitPrice);
       const lineTotal = round2(itemSubtotal * (1 + ivaRate / 100));
 

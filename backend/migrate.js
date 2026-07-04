@@ -42,11 +42,14 @@ const statements = [
     stock INT DEFAULT 0,
     min_stock INT DEFAULT 0,
     apply_iva BOOLEAN DEFAULT true,
+    iva_rate NUMERIC(5,2),
     image_url VARCHAR(255),
     active BOOLEAN DEFAULT true,
     show_in_catalog BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT NOW()
   )`,
+
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS iva_rate NUMERIC(5,2)`,
 
   `CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,

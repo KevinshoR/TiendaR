@@ -1,4 +1,43 @@
+const path = require('path');
+const crypto = require('crypto');
+const multer = require('multer');
 const pool = require('../config/db');
+
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const ALLOWED_MIME_TO_EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+    filename: (req, file, cb) => {
+      const ext = ALLOWED_MIME_TO_EXT[file.mimetype];
+      cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_MIME_TO_EXT[file.mimetype]) {
+      return cb(new Error('Solo se permiten imágenes JPG, PNG o WEBP'));
+    }
+    cb(null, true);
+  },
+}).single('image');
+
+function uploadImage(req, res) {
+  upload(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message || 'Error al subir la imagen' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'No se recibió ninguna imagen' });
+    }
+    return res.status(201).json({ url: `/uploads/${req.file.filename}` });
+  });
+}
 
 async function list(req, res) {
   const { search } = req.query;
@@ -31,6 +70,8 @@ async function create(req, res) {
     stock,
     min_stock,
     apply_iva,
+    iva_rate,
+    image_url,
     show_in_catalog,
   } = req.body;
 
@@ -48,8 +89,8 @@ async function create(req, res) {
     const initialStock = stock ? Number(stock) : 0;
 
     const result = await client.query(
-      `INSERT INTO products (store_id, name, sku, description, price, cost, stock, min_stock, apply_iva, show_in_catalog)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      `INSERT INTO products (store_id, name, sku, description, price, cost, stock, min_stock, apply_iva, iva_rate, image_url, show_in_catalog)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         req.user.store_id,
         name.trim(),
@@ -60,6 +101,8 @@ async function create(req, res) {
         initialStock,
         min_stock || 0,
         apply_iva === undefined ? true : apply_iva,
+        iva_rate === undefined || iva_rate === '' ? null : iva_rate,
+        image_url || null,
         show_in_catalog === undefined ? true : show_in_catalog,
       ]
     );
@@ -95,6 +138,8 @@ async function update(req, res) {
     stock,
     min_stock,
     apply_iva,
+    iva_rate,
+    image_url,
     show_in_catalog,
   } = req.body;
 
@@ -123,8 +168,8 @@ async function update(req, res) {
 
     const result = await client.query(
       `UPDATE products SET name = $1, sku = $2, description = $3, price = $4, cost = $5,
-       stock = $6, min_stock = $7, apply_iva = $8, show_in_catalog = $9
-       WHERE id = $10 AND store_id = $11 RETURNING *`,
+       stock = $6, min_stock = $7, apply_iva = $8, iva_rate = $9, image_url = $10, show_in_catalog = $11
+       WHERE id = $12 AND store_id = $13 RETURNING *`,
       [
         name.trim(),
         sku || null,
@@ -134,6 +179,8 @@ async function update(req, res) {
         newStock,
         min_stock === undefined ? currentProduct.min_stock : min_stock,
         apply_iva === undefined ? currentProduct.apply_iva : apply_iva,
+        iva_rate === undefined ? currentProduct.iva_rate : (iva_rate === '' ? null : iva_rate),
+        image_url === undefined ? currentProduct.image_url : image_url,
         show_in_catalog === undefined ? currentProduct.show_in_catalog : show_in_catalog,
         id,
         req.user.store_id,
@@ -178,4 +225,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { list, create, update, remove };
+module.exports = { list, create, update, remove, uploadImage };

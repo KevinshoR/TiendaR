@@ -7,6 +7,7 @@ const { requireRole } = require('../middleware/role.middleware');
 router.use(authMiddleware, requireRole('owner', 'empleado'));
 
 router.get('/', productsController.list);
+router.post('/upload', productsController.uploadImage);
 router.post('/', productsController.create);
 router.put('/:id', productsController.update);
 router.delete('/:id', productsController.remove);

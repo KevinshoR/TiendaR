@@ -31,7 +31,7 @@ export function ToastProvider({ children }) {
             }`}
             style={{ animation: 'toastIn .3s ease both' }}
           >
-            <span className={t.type === 'success' ? 'text-esmeralda' : 'text-red-500'}>
+            <span className={t.type === 'success' ? 'text-esmeralda' : 'text-red-600'}>
               {t.type === 'success' ? '✓' : '✕'}
             </span>
             {t.message}
