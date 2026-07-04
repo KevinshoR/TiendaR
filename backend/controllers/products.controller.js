@@ -50,7 +50,7 @@ async function list(req, res) {
       query += ` AND (name ILIKE $${params.length} OR sku ILIKE $${params.length})`;
     }
 
-    query += ' ORDER BY name';
+    query += ' ORDER BY created_at DESC';
 
     const result = await pool.query(query, params);
     return res.json(result.rows);

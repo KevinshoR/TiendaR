@@ -18,6 +18,7 @@ function NuevaVenta() {
   const [cart, setCart] = useState([]) // {product, quantity}
   const [type, setType] = useState('contado')
   const [customerId, setCustomerId] = useState('')
+  const [customerNameLibre, setCustomerNameLibre] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -62,14 +63,18 @@ function NuevaVenta() {
     )
   }
 
-  /* IVA por ítem: solo si la tienda lo tiene activo y el producto lo aplica */
+  /* IVA por ítem: solo si la tienda lo tiene activo y el producto lo aplica;
+     usa la tarifa propia del producto si la tiene, si no la de la tienda */
   const totales = useMemo(() => {
     let subtotal = 0
     let iva = 0
     for (const { product, quantity } of cart) {
       const base = Number(product.price) * quantity
       subtotal += base
-      if (store?.iva_enabled && product.apply_iva) iva += base * (Number(store.iva_rate) / 100)
+      if (store?.iva_enabled && product.apply_iva) {
+        const rate = product.iva_rate !== null && product.iva_rate !== undefined ? Number(product.iva_rate) : Number(store.iva_rate)
+        iva += base * (rate / 100)
+      }
     }
     return { subtotal, iva, total: subtotal + iva }
   }, [cart, store])
@@ -84,6 +89,7 @@ function NuevaVenta() {
       await api.post('/sales', {
         type,
         customer_id: type === 'credito' ? Number(customerId) : customerId ? Number(customerId) : null,
+        customer_name_libre: type === 'contado' && !customerId ? customerNameLibre.trim() || null : null,
         due_date: type === 'credito' ? dueDate : null,
         items: cart.map((c) => ({ product_id: c.product.id, quantity: c.quantity })),
       })
@@ -189,6 +195,17 @@ function NuevaVenta() {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+            {type === 'contado' && (
+              <div>
+                <input
+                  value={customerNameLibre}
+                  onChange={(e) => setCustomerNameLibre(e.target.value)}
+                  disabled={!!customerId}
+                  placeholder="Cliente ocasional (opcional, si no está registrado)"
+                  className="w-full rounded-xl border border-borde bg-humo px-3 py-2.5 text-sm outline-none focus:border-esmeralda disabled:opacity-50"
+                />
+              </div>
+            )}
             {type === 'credito' && (
               <div>
                 <label className="mb-1 block text-xs font-semibold text-ceniza">FECHA LÍMITE DE PAGO *</label>
@@ -206,8 +223,8 @@ function NuevaVenta() {
           {/* Totales */}
           <div className="mt-5 border-t border-borde pt-4 text-sm">
             <div className="flex justify-between text-ceniza"><span>Subtotal</span><span>{COP(totales.subtotal)}</span></div>
-            {store?.iva_enabled && (
-              <div className="mt-1 flex justify-between text-ceniza"><span>IVA ({store.iva_rate}%)</span><span>{COP(totales.iva)}</span></div>
+            {totales.iva > 0 && (
+              <div className="mt-1 flex justify-between text-ceniza"><span>IVA</span><span>{COP(totales.iva)}</span></div>
             )}
             <div className="mt-2 flex justify-between font-display text-lg font-bold text-tinta"><span>Total</span><span>{COP(totales.total)}</span></div>
           </div>

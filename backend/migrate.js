@@ -67,6 +67,7 @@ const statements = [
     store_id INT REFERENCES stores(id) ON DELETE CASCADE,
     user_id INT REFERENCES users(id),
     customer_id INT REFERENCES customers(id),
+    customer_name_libre VARCHAR(150),
     type VARCHAR(10) CHECK (type IN ('contado','credito')),
     subtotal NUMERIC(12,2),
     iva_total NUMERIC(12,2),
@@ -77,6 +78,8 @@ const statements = [
     notes TEXT,
     created_at TIMESTAMP DEFAULT NOW()
   )`,
+
+  `ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name_libre VARCHAR(150)`,
 
   `CREATE TABLE IF NOT EXISTS sale_items (
     id SERIAL PRIMARY KEY,

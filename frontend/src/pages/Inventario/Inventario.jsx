@@ -1,12 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Plus, Search, Pencil, Trash2, X, Link2, Upload, ImageOff } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import { useAuth } from '../../context/AuthContext'
+import SortSelect from '../../components/SortSelect'
 
 const COP = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '')
 const imagenUrl = (url) => (url?.startsWith('http') ? url : `${API_ORIGIN}${url}`)
+
+const ORDEN_OPCIONES = [
+  { value: 'recent', label: 'Más reciente' },
+  { value: 'price_desc', label: 'Precio: mayor a menor' },
+  { value: 'price_asc', label: 'Precio: menor a mayor' },
+  { value: 'stock_desc', label: 'Stock: mayor a menor' },
+  { value: 'stock_asc', label: 'Stock: menor a mayor' },
+]
 
 const VACIO = {
   name: '',
@@ -26,6 +35,7 @@ function Inventario() {
   const { store } = useAuth()
   const [productos, setProductos] = useState([])
   const [search, setSearch] = useState('')
+  const [orden, setOrden] = useState('recent')
   const [modal, setModal] = useState(null) // null | {..form}
   const [modoImagen, setModoImagen] = useState('link') // 'link' | 'archivo'
   const [subiendo, setSubiendo] = useState(false)
@@ -42,6 +52,17 @@ function Inventario() {
     const t = setTimeout(() => cargar(search).catch(() => {}), 350)
     return () => clearTimeout(t)
   }, [search])
+
+  const productosOrdenados = useMemo(() => {
+    const arr = [...productos]
+    switch (orden) {
+      case 'price_desc': return arr.sort((a, b) => Number(b.price) - Number(a.price))
+      case 'price_asc': return arr.sort((a, b) => Number(a.price) - Number(b.price))
+      case 'stock_desc': return arr.sort((a, b) => Number(b.stock) - Number(a.stock))
+      case 'stock_asc': return arr.sort((a, b) => Number(a.stock) - Number(b.stock))
+      default: return arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    }
+  }, [productos, orden])
 
   function abrirModal(p) {
     setModal(p ? { ...p, iva_rate: p.iva_rate ?? '' } : { ...VACIO })
@@ -120,14 +141,17 @@ function Inventario() {
         </button>
       </div>
 
-      <div className="relative mb-5 max-w-sm">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ceniza" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre o código..."
-          className="w-full rounded-xl border border-borde bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-esmeralda"
-        />
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ceniza" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o código..."
+            className="w-full rounded-xl border border-borde bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-esmeralda"
+          />
+        </div>
+        <SortSelect value={orden} onChange={setOrden} options={ORDEN_OPCIONES} />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
@@ -142,7 +166,7 @@ function Inventario() {
             </tr>
           </thead>
           <tbody className="divide-y divide-borde">
-            {productos.map((p) => {
+            {productosOrdenados.map((p) => {
               const bajo = p.stock <= p.min_stock
               return (
                 <tr key={p.id} className="hover:bg-humo/60">
@@ -180,7 +204,7 @@ function Inventario() {
                 </tr>
               )
             })}
-            {productos.length === 0 && (
+            {productosOrdenados.length === 0 && (
               <tr><td colSpan={5} className="px-5 py-10 text-center text-ceniza">No hay productos. Crea el primero.</td></tr>
             )}
           </tbody>

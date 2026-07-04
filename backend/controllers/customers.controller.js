@@ -3,7 +3,7 @@ const pool = require('../config/db');
 async function list(req, res) {
   try {
     const result = await pool.query(
-      'SELECT * FROM customers WHERE store_id = $1 ORDER BY name',
+      'SELECT * FROM customers WHERE store_id = $1 ORDER BY created_at DESC',
       [req.user.store_id]
     );
     return res.json(result.rows);

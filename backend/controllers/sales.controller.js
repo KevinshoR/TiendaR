@@ -9,7 +9,7 @@ async function list(req, res) {
   try {
     let query = `
       SELECT s.id, s.type, s.status, s.subtotal, s.iva_total, s.total, s.paid_amount, s.due_date, s.created_at,
-        c.name AS customer_name, u.name AS user_name,
+        COALESCE(c.name, s.customer_name_libre) AS customer_name, u.name AS user_name,
         (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) AS items_count
       FROM sales s
       LEFT JOIN customers c ON s.customer_id = c.id
@@ -46,7 +46,7 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
-  const { type, customer_id, due_date, notes, items } = req.body;
+  const { type, customer_id, customer_name_libre, due_date, notes, items } = req.body;
 
   if (!['contado', 'credito'].includes(type)) {
     return res.status(400).json({ message: 'El tipo de venta debe ser contado o crédito' });
@@ -125,14 +125,19 @@ async function create(req, res) {
     const ivaTotal = round2(total - subtotal);
     const status = type === 'contado' ? 'pagada' : 'pendiente';
     const paidAmount = type === 'contado' ? total : 0;
+    const nombreLibre =
+      type === 'contado' && !customer_id && customer_name_libre && customer_name_libre.trim()
+        ? customer_name_libre.trim()
+        : null;
 
     const saleResult = await client.query(
-      `INSERT INTO sales (store_id, user_id, customer_id, type, subtotal, iva_total, total, paid_amount, status, due_date, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      `INSERT INTO sales (store_id, user_id, customer_id, customer_name_libre, type, subtotal, iva_total, total, paid_amount, status, due_date, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         req.user.store_id,
         req.user.id,
         customer_id || null,
+        nombreLibre,
         type,
         subtotal,
         ivaTotal,

@@ -1,15 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Plus, Pencil } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
+import SortSelect from '../../components/SortSelect'
 
 const VACIO = { name: '', phone: '', email: '', document: '' }
+
+const ORDEN_OPCIONES = [
+  { value: 'recent', label: 'Más reciente' },
+  { value: 'name_asc', label: 'Nombre A-Z' },
+  { value: 'name_desc', label: 'Nombre Z-A' },
+]
 
 function Clientes() {
   const toast = useToast()
   const [clientes, setClientes] = useState([])
   const [modal, setModal] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [orden, setOrden] = useState('recent')
 
   async function cargar() {
     const { data } = await api.get('/customers')
@@ -17,6 +25,15 @@ function Clientes() {
   }
 
   useEffect(() => { cargar().catch(() => toast.error('Error cargando clientes')) }, [])
+
+  const clientesOrdenados = useMemo(() => {
+    const arr = [...clientes]
+    switch (orden) {
+      case 'name_asc': return arr.sort((a, b) => a.name.localeCompare(b.name))
+      case 'name_desc': return arr.sort((a, b) => b.name.localeCompare(a.name))
+      default: return arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    }
+  }, [clientes, orden])
 
   async function guardar(e) {
     e.preventDefault()
@@ -49,6 +66,10 @@ function Clientes() {
         </button>
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <SortSelect value={orden} onChange={setOrden} options={ORDEN_OPCIONES} />
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
@@ -60,7 +81,7 @@ function Clientes() {
             </tr>
           </thead>
           <tbody className="divide-y divide-borde">
-            {clientes.map((c) => (
+            {clientesOrdenados.map((c) => (
               <tr key={c.id} className="hover:bg-humo/60">
                 <td className="px-5 py-3 font-medium text-tinta">{c.name}</td>
                 <td className="px-5 py-3 text-ceniza">{c.phone || '—'}</td>
@@ -72,7 +93,7 @@ function Clientes() {
                 </td>
               </tr>
             ))}
-            {clientes.length === 0 && (
+            {clientesOrdenados.length === 0 && (
               <tr><td colSpan={4} className="px-5 py-10 text-center text-ceniza">Aún no tienes clientes. Los necesitas para las ventas a crédito.</td></tr>
             )}
           </tbody>

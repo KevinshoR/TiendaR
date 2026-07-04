@@ -1,16 +1,33 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { TrendingUp, CalendarDays, HandCoins, AlertTriangle, PlusCircle } from 'lucide-react'
+import { TrendingUp, CalendarDays, HandCoins, AlertTriangle, PlusCircle, Trophy, CalendarCheck } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 
 const COP = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`
 const fecha = (iso) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const diaCorto = (iso) => new Date(iso).toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' })
+
+/* Paleta fija para las gráficas: solo tokens del sistema, nunca colores por defecto de recharts */
+const CHART = {
+  tinta: '#161616',
+  esmeralda: '#00C896',
+  ceniza: '#6B6B6B',
+  borde: '#E8E8E4',
+}
 
 const STATUS = {
   pagada: 'bg-esmeralda/15 text-esmeralda',
   pendiente: 'bg-amber-100 text-amber-700',
   anulada: 'bg-red-100 text-red-600',
+}
+
+const tooltipStyle = {
+  contentStyle: { borderRadius: 12, border: `1px solid ${CHART.borde}`, fontSize: 12.5, boxShadow: '0 8px 24px rgba(22,22,22,0.08)' },
+  labelStyle: { color: CHART.tinta, fontWeight: 700, marginBottom: 2 },
+  itemStyle: { color: CHART.ceniza },
+  cursor: { fill: CHART.borde, opacity: 0.4 },
 }
 
 function Dashboard() {
@@ -31,6 +48,9 @@ function Dashboard() {
     { label: 'Por cobrar', value: COP(data?.porCobrar), sub: 'ventas a crédito', icon: HandCoins },
     { label: 'Stock bajo', value: data?.stockBajo?.length ?? 0, sub: 'productos por reponer', icon: AlertTriangle, alerta: (data?.stockBajo?.length ?? 0) > 0 },
   ]
+
+  const ventas7Dias = (data?.ventasUltimos7Dias || []).map((v) => ({ label: diaCorto(v.fecha), total: v.total }))
+  const topProductos = data?.topProductos || []
 
   return (
     <div>
@@ -69,6 +89,77 @@ function Dashboard() {
             </div>
           )
         })}
+      </div>
+
+      {/* Destacados del mes */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="flex items-center gap-4 rounded-2xl bg-tinta p-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-esmeralda">
+            <Trophy size={20} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Producto más vendido del mes</p>
+            <p className="truncate font-display text-lg font-bold text-white">{data?.productoMasVendido?.name || 'Sin ventas aún'}</p>
+            {data?.productoMasVendido && <p className="text-xs text-white/50">{data.productoMasVendido.cantidad} unidades vendidas</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-4 rounded-2xl border border-esmeralda/30 bg-esmeralda/10 p-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-esmeralda">
+            <CalendarCheck size={20} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-tinta/60">Día con más ventas del mes</p>
+            <p className="truncate font-display text-lg font-bold text-tinta">
+              {data?.diaMasVentas ? new Date(data.diaMasVentas.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' }) : 'Sin ventas aún'}
+            </p>
+            {data?.diaMasVentas && <p className="text-xs text-tinta/60">{COP(data.diaMasVentas.total)} en ventas</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Gráficas */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-borde bg-white p-6">
+          <h2 className="mb-4 font-display text-lg font-bold text-tinta">Ventas de los últimos 7 días</h2>
+          {ventas7Dias.some((v) => v.total > 0) ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={ventas7Dias} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke={CHART.borde} />
+                <XAxis dataKey="label" tick={{ fill: CHART.ceniza, fontSize: 12 }} axisLine={{ stroke: CHART.borde }} tickLine={false} />
+                <YAxis tick={{ fill: CHART.ceniza, fontSize: 12 }} axisLine={false} tickLine={false} width={40} />
+                <Tooltip {...tooltipStyle} formatter={(v) => [COP(v), 'Ventas']} />
+                <Bar dataKey="total" fill={CHART.esmeralda} radius={[6, 6, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="py-16 text-center text-sm text-ceniza">{data ? 'Aún no hay ventas esta semana.' : 'Cargando...'}</p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-borde bg-white p-6">
+          <h2 className="mb-4 font-display text-lg font-bold text-tinta">Top 5 productos del mes</h2>
+          {topProductos.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={topProductos} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
+                <CartesianGrid horizontal={false} stroke={CHART.borde} />
+                <XAxis type="number" tick={{ fill: CHART.ceniza, fontSize: 12 }} axisLine={{ stroke: CHART.borde }} tickLine={false} allowDecimals={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fill: CHART.tinta, fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={100}
+                  tickFormatter={(v) => (v.length > 14 ? `${v.slice(0, 14)}…` : v)}
+                />
+                <Tooltip {...tooltipStyle} formatter={(v) => [v, 'Unidades']} />
+                <Bar dataKey="cantidad" fill={CHART.tinta} radius={[0, 6, 6, 0]} maxBarSize={22} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="py-16 text-center text-sm text-ceniza">{data ? 'Aún no hay productos vendidos este mes.' : 'Cargando...'}</p>
+          )}
+        </section>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
