@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard/Dashboard'
 import Inventario from './pages/Inventario/Inventario'
 import Ventas from './pages/Ventas/Ventas'
 import NuevaVenta from './pages/NuevaVenta/NuevaVenta'
+import TiendaPublica from './pages/Tienda/TiendaPublica'
 import Clientes from './pages/Clientes/Clientes'
 import Empleados from './pages/Empleados/Empleados'
 import Configuracion from './pages/Configuracion/Configuracion'
@@ -17,6 +18,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/tienda/:slug" element={<TiendaPublica />} />
       <Route path="/registro" element={<Registro />} />
 
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>

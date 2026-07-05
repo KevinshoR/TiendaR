@@ -23,6 +23,13 @@ function Configuracion() {
         address: form.address,
         iva_enabled: form.iva_enabled,
         iva_rate: Number(form.iva_rate),
+        whatsapp: form.whatsapp,
+        description_public: form.description_public,
+        instagram_url: form.instagram_url,
+        facebook_url: form.facebook_url,
+        tiktok_url: form.tiktok_url,
+        telegram_url: form.telegram_url,
+        youtube_url: form.youtube_url,
       })
       updateStore(data)
       toast.success('Configuración guardada')
@@ -33,9 +40,19 @@ function Configuracion() {
     }
   }
 
+  async function copiarEnlace() {
+    try {
+      await navigator.clipboard.writeText(enlacePublico)
+      toast.success('Enlace copiado al portapapeles')
+    } catch (err) {
+      toast.error('No se pudo copiar el enlace')
+    }
+  }
+
   if (!form) return <p className="text-ceniza">Cargando...</p>
 
   const input = 'w-full rounded-xl border border-borde bg-humo px-4 py-2.5 text-sm outline-none focus:border-esmeralda'
+  const enlacePublico = `${window.location.origin}/tienda/${form.slug}`
 
   return (
     <div className="max-w-xl">
@@ -88,8 +105,97 @@ function Configuracion() {
             )}
           </div>
 
-          <div className="rounded-xl bg-humo px-4 py-3 text-xs text-ceniza">
-            Enlace de tu catálogo público (próximamente): <span className="font-mono text-tinta">/tienda/{form.slug}</span>
+        </div>
+
+        {/* ═══ Tu tienda online ═══ */}
+        <div className="mt-8 border-t border-borde pt-6">
+          <h2 className="font-display text-lg font-bold text-tinta">Tu tienda online</h2>
+          <p className="mt-0.5 text-xs text-ceniza">Así te ven tus clientes en tu catálogo público.</p>
+
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-col gap-2 rounded-xl bg-humo px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="truncate text-xs text-ceniza">
+                Enlace público: <span className="font-mono text-tinta">{enlacePublico}</span>
+              </p>
+              <button
+                type="button"
+                onClick={copiarEnlace}
+                className="shrink-0 rounded-lg border border-borde bg-white px-3 py-1.5 text-xs font-bold text-tinta hover:border-esmeralda"
+              >
+                Copiar enlace
+              </button>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ceniza">DESCRIPCIÓN PÚBLICA</label>
+              <textarea
+                rows={3}
+                className={input}
+                value={form.description_public || ''}
+                onChange={(e) => setForm({ ...form, description_public: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ceniza">WHATSAPP PARA PEDIDOS</label>
+              <input
+                className={input}
+                value={form.whatsapp || ''}
+                onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-ceniza">Código de país + número, sin espacios ni signos. Ej: 573001234567</p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-ceniza">REDES SOCIALES</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ceniza">INSTAGRAM</label>
+                  <input
+                    type="url"
+                    className={input}
+                    value={form.instagram_url || ''}
+                    onChange={(e) => setForm({ ...form, instagram_url: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ceniza">FACEBOOK</label>
+                  <input
+                    type="url"
+                    className={input}
+                    value={form.facebook_url || ''}
+                    onChange={(e) => setForm({ ...form, facebook_url: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ceniza">TIKTOK</label>
+                  <input
+                    type="url"
+                    className={input}
+                    value={form.tiktok_url || ''}
+                    onChange={(e) => setForm({ ...form, tiktok_url: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ceniza">TELEGRAM (OPCIONAL)</label>
+                  <input
+                    type="url"
+                    className={input}
+                    value={form.telegram_url || ''}
+                    onChange={(e) => setForm({ ...form, telegram_url: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ceniza">YOUTUBE (OPCIONAL)</label>
+                  <input
+                    type="url"
+                    className={input}
+                    value={form.youtube_url || ''}
+                    onChange={(e) => setForm({ ...form, youtube_url: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

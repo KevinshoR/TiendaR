@@ -20,6 +20,14 @@ const statements = [
     created_at TIMESTAMP DEFAULT NOW()
   )`,
 
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(20)`,
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS description_public TEXT`,
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS instagram_url VARCHAR(255)`,
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS facebook_url VARCHAR(255)`,
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS tiktok_url VARCHAR(255)`,
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS telegram_url VARCHAR(255)`,
+  `ALTER TABLE stores ADD COLUMN IF NOT EXISTS youtube_url VARCHAR(255)`,
+
   `CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     store_id INT REFERENCES stores(id) ON DELETE CASCADE,

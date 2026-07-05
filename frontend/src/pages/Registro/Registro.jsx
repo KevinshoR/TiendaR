@@ -19,7 +19,7 @@ function Registro() {
     setLoading(true)
     try {
       await register(form)
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Error al crear la cuenta')
     } finally {
