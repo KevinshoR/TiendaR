@@ -233,4 +233,33 @@ async function cancel(req, res) {
   }
 }
 
-module.exports = { list, create, cancel };
+async function pay(req, res) {
+  const { id } = req.params;
+  try {
+    const saleResult = await pool.query('SELECT * FROM sales WHERE id = $1 AND store_id = $2', [
+      id,
+      req.user.store_id,
+    ]);
+    const sale = saleResult.rows[0];
+    if (!sale) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    if (sale.status === 'anulada') {
+      return res.status(400).json({ message: 'La venta está anulada y no puede cambiar de estado' });
+    }
+    if (sale.status === 'pagada') {
+      return res.status(400).json({ message: 'La venta ya está pagada' });
+    }
+
+    const result = await pool.query(
+      `UPDATE sales SET status = 'pagada', paid_amount = total WHERE id = $1 AND store_id = $2 RETURNING *`,
+      [id, req.user.store_id]
+    );
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Error al marcar la venta como pagada' });
+  }
+}
+
+module.exports = { list, create, cancel, pay };

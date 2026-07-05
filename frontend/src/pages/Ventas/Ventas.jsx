@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Ban } from 'lucide-react'
+import { PlusCircle, Ban, CheckCircle2 } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import { useAuth } from '../../context/AuthContext'
 import SortSelect from '../../components/SortSelect'
+import StatusBadge from '../../components/StatusBadge'
 
 const COP = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`
 const fecha = (iso) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-
-const STATUS = {
-  pagada: 'bg-esmeralda/15 text-esmeralda',
-  pendiente: 'bg-amber-100 text-amber-700',
-  anulada: 'bg-red-100 text-red-600',
-}
 
 const ORDEN_OPCIONES = [
   { value: 'recent', label: 'Más reciente' },
@@ -58,6 +53,17 @@ function Ventas() {
     }
   }
 
+  async function marcarPagada(v) {
+    if (!confirm(`¿Marcar la venta #${v.id} como pagada por ${COP(v.total)}?`)) return
+    try {
+      await api.patch(`/sales/${v.id}/pay`)
+      toast.success('Venta marcada como pagada')
+      cargar()
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'Error marcando como pagada')
+    }
+  }
+
   const input = 'rounded-xl border border-borde bg-white px-3 py-2 text-sm outline-none focus:border-esmeralda'
 
   return (
@@ -94,7 +100,6 @@ function Ventas() {
               <th className="px-5 py-3.5">Tipo</th>
               <th className="px-5 py-3.5">Estado</th>
               <th className="px-5 py-3.5 text-right">Total</th>
-              {user?.role === 'owner' && <th className="px-5 py-3.5 text-right">Acciones</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-borde">
@@ -104,22 +109,27 @@ function Ventas() {
                 <td className="px-5 py-3 font-medium text-tinta">{v.customer_name || 'Mostrador'}</td>
                 <td className="px-5 py-3 capitalize text-ceniza">{v.type}{v.type === 'credito' && v.due_date ? ` · vence ${new Date(v.due_date).toLocaleDateString('es-CO')}` : ''}</td>
                 <td className="px-5 py-3">
-                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold capitalize ${STATUS[v.status]}`}>{v.status}</span>
+                  <div className="flex items-center gap-1.5">
+                    <StatusBadge status={v.status} />
+                    {user?.role === 'owner' && v.status !== 'anulada' && (
+                      <>
+                        {v.status === 'pendiente' && (
+                          <button onClick={() => marcarPagada(v)} className="rounded-lg p-1.5 text-ceniza hover:bg-esmeralda/10 hover:text-esmeralda" title="Marcar como pagada">
+                            <CheckCircle2 size={14} />
+                          </button>
+                        )}
+                        <button onClick={() => anular(v)} className="rounded-lg p-1.5 text-ceniza hover:bg-red-50 hover:text-red-600" title="Anular venta">
+                          <Ban size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-3 text-right font-bold text-tinta">{COP(v.total)}</td>
-                {user?.role === 'owner' && (
-                  <td className="px-5 py-3 text-right">
-                    {v.status !== 'anulada' && (
-                      <button onClick={() => anular(v)} className="rounded-lg p-2 text-ceniza hover:bg-red-50 hover:text-red-600" title="Anular venta">
-                        <Ban size={15} />
-                      </button>
-                    )}
-                  </td>
-                )}
               </tr>
             ))}
             {ventasOrdenadas.length === 0 && (
-              <tr><td colSpan={6} className="px-5 py-10 text-center text-ceniza">No hay ventas con esos filtros.</td></tr>
+              <tr><td colSpan={5} className="px-5 py-10 text-center text-ceniza">No hay ventas con esos filtros.</td></tr>
             )}
           </tbody>
         </table>

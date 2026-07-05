@@ -4,6 +4,7 @@ import { TrendingUp, CalendarDays, HandCoins, AlertTriangle, PlusCircle, Trophy,
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import StatusBadge from '../../components/StatusBadge'
 
 const COP = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`
 const fecha = (iso) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -15,12 +16,6 @@ const CHART = {
   esmeralda: '#00C896',
   ceniza: '#6B6B6B',
   borde: '#E8E8E4',
-}
-
-const STATUS = {
-  pagada: 'bg-esmeralda/15 text-esmeralda',
-  pendiente: 'bg-amber-100 text-amber-700',
-  anulada: 'bg-red-100 text-red-600',
 }
 
 const tooltipStyle = {
@@ -179,7 +174,7 @@ function Dashboard() {
                     </p>
                     <p className="text-xs text-ceniza">{fecha(v.created_at)} · {v.items_count} ítems · {v.user_name}</p>
                   </div>
-                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold capitalize ${STATUS[v.status]}`}>{v.status}</span>
+                  <StatusBadge status={v.status} />
                   <span className="w-24 text-right text-sm font-bold text-tinta">{COP(v.total)}</span>
                 </div>
               ))}

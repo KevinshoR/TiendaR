@@ -8,6 +8,7 @@ router.use(authMiddleware, soloLectura);
 
 router.get('/', requireRole('owner', 'empleado', 'contador'), salesController.list);
 router.post('/', requireRole('owner', 'empleado'), salesController.create);
+router.patch('/:id/pay', requireRole('owner'), salesController.pay);
 router.patch('/:id/cancel', requireRole('owner'), salesController.cancel);
 
 module.exports = router;
