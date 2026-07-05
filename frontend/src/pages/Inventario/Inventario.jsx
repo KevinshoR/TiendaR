@@ -28,6 +28,7 @@ const VACIO = {
   iva_rate: '',
   image_url: '',
   show_in_catalog: true,
+  sizes: '',
 }
 
 function Inventario() {
@@ -234,6 +235,16 @@ function Inventario() {
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-ceniza">CÓDIGO / SKU</label>
                     <input className={input} value={modal.sku || ''} onChange={(e) => setModal({ ...modal, sku: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-ceniza">TALLAS DISPONIBLES (OPCIONAL)</label>
+                    <input
+                      className={input}
+                      placeholder="S, M, L, XL"
+                      value={modal.sizes || ''}
+                      onChange={(e) => setModal({ ...modal, sizes: e.target.value })}
+                    />
+                    <p className="mt-1 text-xs text-ceniza">Sepáralas con comas. Ej: S, M, L, XL</p>
                   </div>
                 </div>
               </div>

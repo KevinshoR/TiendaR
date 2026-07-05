@@ -73,6 +73,7 @@ async function create(req, res) {
     iva_rate,
     image_url,
     show_in_catalog,
+    sizes,
   } = req.body;
 
   if (!name || !name.trim()) {
@@ -89,8 +90,8 @@ async function create(req, res) {
     const initialStock = stock ? Number(stock) : 0;
 
     const result = await client.query(
-      `INSERT INTO products (store_id, name, sku, description, price, cost, stock, min_stock, apply_iva, iva_rate, image_url, show_in_catalog)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      `INSERT INTO products (store_id, name, sku, description, price, cost, stock, min_stock, apply_iva, iva_rate, image_url, show_in_catalog, sizes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
       [
         req.user.store_id,
         name.trim(),
@@ -104,6 +105,7 @@ async function create(req, res) {
         iva_rate === undefined || iva_rate === '' ? null : iva_rate,
         image_url || null,
         show_in_catalog === undefined ? true : show_in_catalog,
+        sizes || null,
       ]
     );
     const product = result.rows[0];
@@ -141,6 +143,7 @@ async function update(req, res) {
     iva_rate,
     image_url,
     show_in_catalog,
+    sizes,
   } = req.body;
 
   if (!name || !name.trim()) {
@@ -168,8 +171,8 @@ async function update(req, res) {
 
     const result = await client.query(
       `UPDATE products SET name = $1, sku = $2, description = $3, price = $4, cost = $5,
-       stock = $6, min_stock = $7, apply_iva = $8, iva_rate = $9, image_url = $10, show_in_catalog = $11
-       WHERE id = $12 AND store_id = $13 RETURNING *`,
+       stock = $6, min_stock = $7, apply_iva = $8, iva_rate = $9, image_url = $10, show_in_catalog = $11, sizes = $12
+       WHERE id = $13 AND store_id = $14 RETURNING *`,
       [
         name.trim(),
         sku || null,
@@ -182,6 +185,7 @@ async function update(req, res) {
         iva_rate === undefined ? currentProduct.iva_rate : (iva_rate === '' ? null : iva_rate),
         image_url === undefined ? currentProduct.image_url : image_url,
         show_in_catalog === undefined ? currentProduct.show_in_catalog : show_in_catalog,
+        sizes === undefined ? currentProduct.sizes : (sizes || null),
         id,
         req.user.store_id,
       ]

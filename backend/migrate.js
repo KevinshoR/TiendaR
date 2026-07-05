@@ -58,6 +58,7 @@ const statements = [
   )`,
 
   `ALTER TABLE products ADD COLUMN IF NOT EXISTS iva_rate NUMERIC(5,2)`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes TEXT`,
 
   `CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,

@@ -30,7 +30,7 @@ async function getStoreProducts(req, res) {
     }
 
     const result = await pool.query(
-      `SELECT id, name, description, price, image_url, stock
+      `SELECT id, name, description, price, image_url, stock, sizes
        FROM products
        WHERE store_id = $1 AND active = true AND show_in_catalog = true
        ORDER BY name`,
