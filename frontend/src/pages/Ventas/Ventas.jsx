@@ -123,7 +123,7 @@ function Ventas() {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
+      <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-ceniza">
@@ -138,7 +138,7 @@ function Ventas() {
             {ventasPaginadas.map((v) => (
               <tr key={v.id} className="hover:bg-humo/60">
                 <td className="px-5 py-3">
-                  <p className="font-medium text-tinta">{v.customer_name || 'Mostrador'}</p>
+                  <p className="break-words font-medium text-tinta">{v.customer_name || 'Mostrador'}</p>
                   <p className="text-xs text-ceniza">{fecha(v.created_at)}</p>
                 </td>
                 <td className="px-5 py-3 capitalize text-ceniza">{v.type}{v.type === 'credito' && v.due_date ? ` · vence ${new Date(v.due_date).toLocaleDateString('es-CO')}` : ''}</td>

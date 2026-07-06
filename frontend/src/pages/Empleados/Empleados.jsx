@@ -95,7 +95,7 @@ function Empleados() {
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
+      <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-ceniza">
@@ -110,8 +110,8 @@ function Empleados() {
               return (
                 <tr key={u.id} className="hover:bg-humo/60">
                   <td className="px-5 py-3">
-                    <p className="font-medium text-tinta">{u.name}</p>
-                    <p className="text-xs text-ceniza">{u.email}</p>
+                    <p className="break-words font-medium text-tinta">{u.name}</p>
+                    <p className="break-words text-xs text-ceniza">{u.email}</p>
                   </td>
                   <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${rol.cls}`}>{rol.label}</span></td>
                   <td className="px-5 py-3 text-right">

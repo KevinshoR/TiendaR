@@ -11,6 +11,8 @@ import {
   LogOut,
   Menu,
   X,
+  ShoppingBag,
+  HandCoins,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -24,8 +26,10 @@ import { useAuth } from '../context/AuthContext'
 
 const MODULOS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'empleado', 'contador'], end: true },
+  { to: '/cobranza', label: 'Cobranza', icon: HandCoins, roles: ['owner', 'empleado'] },
   { to: '/ventas/nueva', label: 'Nueva venta', icon: PlusCircle, roles: ['owner', 'empleado'], cta: true },
   { to: '/inventario', label: 'Inventario', icon: Package, roles: ['owner', 'empleado'] },
+  { to: '/compras', label: 'Compras', icon: ShoppingBag, roles: ['owner', 'empleado'] },
   { to: '/ventas', label: 'Ventas', icon: Receipt, roles: ['owner', 'empleado', 'contador'] },
   { to: '/clientes', label: 'Clientes', icon: Users, roles: ['owner', 'empleado'] },
   { to: '/empleados', label: 'Empleados', icon: UserCog, roles: ['owner'] },

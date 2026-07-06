@@ -10,5 +10,7 @@ router.get('/', requireRole('owner', 'empleado', 'contador'), salesController.li
 router.post('/', requireRole('owner', 'empleado'), salesController.create);
 router.patch('/:id/pay', requireRole('owner'), salesController.pay);
 router.patch('/:id/cancel', requireRole('owner'), salesController.cancel);
+router.post('/:id/payments', requireRole('owner', 'empleado'), salesController.addPayment);
+router.get('/:id/payments', requireRole('owner', 'empleado'), salesController.listPayments);
 
 module.exports = router;

@@ -100,7 +100,7 @@ function Clientes() {
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
+      <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-ceniza">
@@ -113,7 +113,7 @@ function Clientes() {
           <tbody className="divide-y divide-borde">
             {clientesPaginados.map((c) => (
               <tr key={c.id} className="hover:bg-humo/60">
-                <td className="px-5 py-3 font-medium text-tinta">{c.name}</td>
+                <td className="break-words px-5 py-3 font-medium text-tinta">{c.name}</td>
                 <td className="px-5 py-3 text-ceniza">{c.phone || '—'}</td>
                 <td className="px-5 py-3 text-ceniza">{c.document || '—'}</td>
                 <td className="px-5 py-3 text-right">

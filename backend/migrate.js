@@ -102,6 +102,29 @@ const statements = [
     line_total NUMERIC(12,2) NOT NULL
   )`,
 
+  `CREATE TABLE IF NOT EXISTS purchases (
+    id SERIAL PRIMARY KEY,
+    store_id INT REFERENCES stores(id) ON DELETE CASCADE,
+    user_id INT REFERENCES users(id),
+    supplier VARCHAR(150),
+    iva_rate NUMERIC(5,2),
+    subtotal NUMERIC(12,2),
+    iva_total NUMERIC(12,2),
+    total NUMERIC(12,2),
+    created_at TIMESTAMP DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS purchase_items (
+    id SERIAL PRIMARY KEY,
+    purchase_id INT REFERENCES purchases(id) ON DELETE CASCADE,
+    product_id INT REFERENCES products(id),
+    quantity INT NOT NULL,
+    unit_cost NUMERIC(12,2) NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_purchases_store_id ON purchases(store_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase_id ON purchase_items(purchase_id)`,
+
   `CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     store_id INT REFERENCES stores(id) ON DELETE CASCADE,

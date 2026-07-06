@@ -1,5 +1,9 @@
 const pool = require('../config/db');
 
+function round2(value) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 async function getDashboard(req, res) {
   const storeId = req.user.store_id;
   try {
@@ -75,6 +79,24 @@ async function getDashboard(req, res) {
       [storeId]
     );
 
+    const inversionMesResult = await pool.query(
+      `SELECT COALESCE(SUM(total), 0) AS total FROM purchases
+       WHERE store_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)`,
+      [storeId]
+    );
+
+    const gananciaResult = await pool.query(
+      `SELECT p.id, p.name, SUM((si.unit_price - COALESCE(p.cost, 0)) * si.quantity) AS ganancia
+       FROM sale_items si
+       JOIN sales s ON si.sale_id = s.id
+       JOIN products p ON si.product_id = p.id
+       WHERE s.store_id = $1 AND s.status != 'anulada'
+         AND date_trunc('month', s.created_at) = date_trunc('month', CURRENT_DATE)
+       GROUP BY p.id, p.name
+       ORDER BY ganancia DESC`,
+      [storeId]
+    );
+
     const ventasUltimos7Dias = ventas7DiasResult.rows.map((row) => ({
       fecha: row.fecha,
       total: Number(row.total),
@@ -85,7 +107,16 @@ async function getDashboard(req, res) {
       cantidad: Number(row.cantidad),
     }));
 
-    return res.json({
+    const gananciaPorProducto = gananciaResult.rows.map((row) => ({
+      name: row.name,
+      ganancia: round2(Number(row.ganancia)),
+    }));
+    const inversionMes = Number(inversionMesResult.rows[0].total);
+    const gananciaMes = round2(gananciaPorProducto.reduce((sum, row) => sum + row.ganancia, 0));
+    const productoMasRentable = gananciaPorProducto[0] || null;
+    const topGanancia = gananciaPorProducto.slice(0, 5);
+
+    const payload = {
       ventasHoy: {
         total: Number(ventasHoyResult.rows[0].total),
         count: Number(ventasHoyResult.rows[0].count),
@@ -106,7 +137,22 @@ async function getDashboard(req, res) {
       diaMasVentas: diaMasVentasResult.rows[0]
         ? { fecha: diaMasVentasResult.rows[0].fecha, total: Number(diaMasVentasResult.rows[0].total) }
         : null,
-    });
+      inversionMes,
+      gananciaMes,
+      productoMasRentable,
+      topGanancia,
+    };
+
+    if (req.user.role !== 'owner') {
+      delete payload.inversionMes;
+    }
+    if (req.user.role === 'empleado') {
+      delete payload.gananciaMes;
+      delete payload.productoMasRentable;
+      delete payload.topGanancia;
+    }
+
+    return res.json(payload);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Error al obtener el dashboard' });

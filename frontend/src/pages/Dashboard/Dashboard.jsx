@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { TrendingUp, CalendarDays, HandCoins, AlertTriangle, PlusCircle, Trophy, CalendarCheck } from 'lucide-react'
+import { TrendingUp, CalendarDays, HandCoins, AlertTriangle, PlusCircle, Trophy, CalendarCheck, ShoppingBag, Sparkles } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
@@ -37,15 +37,25 @@ function Dashboard() {
       .catch(() => setError('No pudimos cargar el dashboard'))
   }, [])
 
+  const puedeVerGanancia = user?.role === 'owner' || user?.role === 'contador'
+  const esOwner = user?.role === 'owner'
+
   const stats = [
     { label: 'Ventas de hoy', value: COP(data?.ventasHoy?.total), sub: `${data?.ventasHoy?.count ?? 0} ventas`, icon: TrendingUp },
     { label: 'Ventas del mes', value: COP(data?.ventasMes?.total), sub: `${data?.ventasMes?.count ?? 0} ventas`, icon: CalendarDays },
     { label: 'Por cobrar', value: COP(data?.porCobrar), sub: 'ventas a crédito', icon: HandCoins },
     { label: 'Stock bajo', value: data?.stockBajo?.length ?? 0, sub: 'productos por reponer', icon: AlertTriangle, alerta: (data?.stockBajo?.length ?? 0) > 0 },
+    ...(puedeVerGanancia
+      ? [{ label: 'Ganancia del mes', value: COP(data?.gananciaMes), sub: 'margen estimado', icon: Sparkles, destacado: true }]
+      : []),
+    ...(esOwner
+      ? [{ label: 'Invertido en compras', value: COP(data?.inversionMes), sub: 'compras del mes', icon: ShoppingBag }]
+      : []),
   ]
 
   const ventas7Dias = (data?.ventasUltimos7Dias || []).map((v) => ({ label: diaCorto(v.fecha), total: v.total }))
   const topProductos = data?.topProductos || []
+  const topGanancia = data?.topGanancia || []
 
   return (
     <div>
@@ -72,14 +82,21 @@ function Dashboard() {
         {stats.map((s) => {
           const Icon = s.icon
           return (
-            <div key={s.label} className="rounded-2xl border border-borde bg-white p-5">
+            <div
+              key={s.label}
+              className={`rounded-2xl border p-5 ${s.destacado ? 'border-esmeralda/30 bg-esmeralda/5' : 'border-borde bg-white'}`}
+            >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ceniza">{s.label}</p>
-                <span className={`rounded-lg p-2 ${s.alerta ? 'bg-amber-100 text-amber-600' : 'bg-esmeralda/10 text-esmeralda'}`}>
+                <span
+                  className={`rounded-lg p-2 ${
+                    s.alerta ? 'bg-amber-100 text-amber-600' : s.destacado ? 'bg-esmeralda text-white' : 'bg-esmeralda/10 text-esmeralda'
+                  }`}
+                >
                   <Icon size={15} />
                 </span>
               </div>
-              <p className="mt-3 font-display text-2xl font-bold text-tinta">{data ? s.value : '···'}</p>
+              <p className={`mt-3 font-display text-2xl font-bold ${s.destacado ? 'text-esmeralda' : 'text-tinta'}`}>{data ? s.value : '···'}</p>
               <p className="mt-0.5 text-xs text-ceniza">{s.sub}</p>
             </div>
           )
@@ -87,7 +104,7 @@ function Dashboard() {
       </div>
 
       {/* Destacados del mes */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className={`mt-6 grid gap-4 sm:grid-cols-2 ${puedeVerGanancia ? 'lg:grid-cols-3' : ''}`}>
         <div className="flex items-center gap-4 rounded-2xl bg-tinta p-5">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-esmeralda">
             <Trophy size={20} />
@@ -110,6 +127,18 @@ function Dashboard() {
             {data?.diaMasVentas && <p className="text-xs text-tinta/60">{COP(data.diaMasVentas.total)} en ventas</p>}
           </div>
         </div>
+        {puedeVerGanancia && (
+          <div className="flex items-center gap-4 rounded-2xl border border-esmeralda/30 bg-esmeralda/10 p-5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-esmeralda text-white">
+              <Sparkles size={20} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-tinta/60">Producto más rentable</p>
+              <p className="truncate font-display text-lg font-bold text-tinta">{data?.productoMasRentable?.name || 'Sin ventas aún'}</p>
+              {data?.productoMasRentable && <p className="text-xs text-tinta/60">{COP(data.productoMasRentable.ganancia)} de ganancia</p>}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Gráficas */}
@@ -156,6 +185,35 @@ function Dashboard() {
           )}
         </section>
       </div>
+
+      {puedeVerGanancia && (
+        <div className="mt-6 grid gap-6">
+          <section className="rounded-2xl border border-borde bg-white p-6">
+            <h2 className="mb-4 font-display text-lg font-bold text-tinta">Top 5 productos por ganancia del mes</h2>
+            {topGanancia.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={topGanancia} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
+                  <CartesianGrid horizontal={false} stroke={CHART.borde} />
+                  <XAxis type="number" tick={{ fill: CHART.ceniza, fontSize: 12 }} axisLine={{ stroke: CHART.borde }} tickLine={false} tickFormatter={(v) => COP(v)} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    tick={{ fill: CHART.tinta, fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={100}
+                    tickFormatter={(v) => (v.length > 14 ? `${v.slice(0, 14)}…` : v)}
+                  />
+                  <Tooltip {...tooltipStyle} formatter={(v) => [COP(v), 'Ganancia']} />
+                  <Bar dataKey="ganancia" fill={CHART.esmeralda} radius={[0, 6, 6, 0]} maxBarSize={22} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="py-16 text-center text-sm text-ceniza">{data ? 'Aún no hay ventas con ganancia este mes.' : 'Cargando...'}</p>
+            )}
+          </section>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         {/* Últimas ventas */}

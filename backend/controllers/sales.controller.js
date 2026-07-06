@@ -283,4 +283,92 @@ async function pay(req, res) {
   }
 }
 
-module.exports = { list, create, cancel, pay };
+async function addPayment(req, res) {
+  const { id } = req.params;
+  const { amount, method } = req.body;
+
+  if (!['efectivo', 'transferencia'].includes(method)) {
+    return res.status(400).json({ message: 'El método de pago debe ser efectivo o transferencia' });
+  }
+  if (!(Number(amount) > 0)) {
+    return res.status(400).json({ message: 'El abono debe ser mayor a 0' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const saleResult = await client.query(
+      'SELECT * FROM sales WHERE id = $1 AND store_id = $2 FOR UPDATE',
+      [id, req.user.store_id]
+    );
+    const sale = saleResult.rows[0];
+    if (!sale) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    if (sale.type !== 'credito' || sale.status === 'anulada') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Esta venta no admite abonos' });
+    }
+
+    const saldo = round2(Number(sale.total) - Number(sale.paid_amount));
+    const amountNum = round2(Number(amount));
+    if (amountNum > saldo) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: `El abono supera el saldo pendiente (${saldo})` });
+    }
+
+    await client.query(
+      `INSERT INTO payments (store_id, sale_id, amount, method) VALUES ($1, $2, $3, $4)`,
+      [req.user.store_id, sale.id, amountNum, method]
+    );
+
+    const nuevoPaidAmount = round2(Number(sale.paid_amount) + amountNum);
+    const nuevoStatus = nuevoPaidAmount >= Number(sale.total) ? 'pagada' : sale.status;
+
+    await client.query(
+      `UPDATE sales SET paid_amount = $1, status = $2 WHERE id = $3 AND store_id = $4`,
+      [nuevoPaidAmount, nuevoStatus, sale.id, req.user.store_id]
+    );
+
+    await client.query('COMMIT');
+
+    return res.json({
+      sale_id: sale.id,
+      nuevo_paid_amount: nuevoPaidAmount,
+      saldo_restante: round2(Number(sale.total) - nuevoPaidAmount),
+      status: nuevoStatus,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    return res.status(500).json({ message: 'Error al registrar el abono' });
+  } finally {
+    client.release();
+  }
+}
+
+async function listPayments(req, res) {
+  const { id } = req.params;
+  try {
+    const saleResult = await pool.query('SELECT id FROM sales WHERE id = $1 AND store_id = $2', [
+      id,
+      req.user.store_id,
+    ]);
+    if (saleResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+
+    const result = await pool.query(
+      `SELECT amount, method, created_at FROM payments WHERE sale_id = $1 AND store_id = $2 ORDER BY created_at DESC`,
+      [id, req.user.store_id]
+    );
+    return res.json(result.rows.map((row) => ({ ...row, amount: Number(row.amount) })));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Error al obtener los abonos' });
+  }
+}
+
+module.exports = { list, create, cancel, pay, addPayment, listPayments };

@@ -192,7 +192,7 @@ function Inventario() {
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
+      <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-ceniza">
@@ -219,9 +219,9 @@ function Inventario() {
                           {p.name?.charAt(0).toUpperCase()}
                         </span>
                       )}
-                      <div>
-                        <p className="font-medium text-tinta">{p.name}</p>
-                        <p className="font-mono text-xs text-ceniza">{p.sku || '—'}</p>
+                      <div className="min-w-0">
+                        <p className="break-words font-medium text-tinta">{p.name}</p>
+                        <p className="break-words font-mono text-xs text-ceniza">{p.sku || '—'}</p>
                       </div>
                     </div>
                   </td>

@@ -4,7 +4,9 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './pages/Login/Login'
 import Registro from './pages/Registro/Registro'
+import Cobranza from './pages/Cobranza/Cobranza'
 import Dashboard from './pages/Dashboard/Dashboard'
+import Compras from './pages/Compras/Compras'
 import Inventario from './pages/Inventario/Inventario'
 import Ventas from './pages/Ventas/Ventas'
 import NuevaVenta from './pages/NuevaVenta/NuevaVenta'
@@ -25,7 +27,9 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/inventario" element={<Inventario />} />
         <Route path="/ventas" element={<Ventas />} />
+        <Route path="/cobranza" element={<Cobranza />} />
         <Route path="/ventas/nueva" element={<NuevaVenta />} />
+        <Route path="/compras" element={<Compras />} />
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/empleados" element={<Empleados />} />
         <Route path="/configuracion" element={<Configuracion />} />
