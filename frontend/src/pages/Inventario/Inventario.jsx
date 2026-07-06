@@ -278,13 +278,7 @@ function Inventario() {
             <Campo label="Stock mínimo" value={detalle.min_stock} />
           </div>
           <Campo label="Tallas" value={detalle.sizes} />
-          <div className="grid grid-cols-2 gap-4">
-            <Campo
-              label="IVA"
-              value={detalle.apply_iva ? `Sí${detalle.iva_rate ? ` (${detalle.iva_rate}%)` : ' (tarifa general)'}` : 'No aplica'}
-            />
-            <Campo label="Visible en catálogo" value={detalle.show_in_catalog ? 'Sí' : 'No'} />
-          </div>
+          <Campo label="Visible en catálogo" value={detalle.show_in_catalog ? 'Sí' : 'No'} />
           <Campo
             label="Fecha de creación"
             value={detalle.created_at ? new Date(detalle.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : null}

@@ -15,6 +15,8 @@ const PAGE_SIZE = 5
 const COP = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`
 const fecha = (iso) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
+const PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia' }
+
 const ORDEN_OPCIONES = [
   { value: 'recent', label: 'Más reciente' },
   { value: 'oldest', label: 'Más antigua' },
@@ -185,10 +187,35 @@ function Ventas() {
           {detalle.type === 'credito' && detalle.due_date && (
             <Campo label="Fecha de vencimiento" value={new Date(detalle.due_date).toLocaleDateString('es-CO')} />
           )}
-          <Campo
-            label="Productos vendidos"
-            value={`${detalle.items_count} producto${Number(detalle.items_count) === 1 ? '' : 's'}`}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Método de pago" value={PAGO_LABEL[detalle.payment_method] || detalle.payment_method} />
+            <Campo label="Atendido por" value={detalle.attended_by_name} />
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ceniza">Productos</p>
+            <div className="overflow-hidden rounded-xl border border-borde">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-borde bg-humo text-left text-xs uppercase tracking-wide text-ceniza">
+                    <th className="px-3 py-2">Producto</th>
+                    <th className="px-3 py-2 text-right">Cant.</th>
+                    <th className="px-3 py-2 text-right">Precio</th>
+                    <th className="px-3 py-2 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-borde">
+                  {(detalle.items || []).map((it, idx) => (
+                    <tr key={idx}>
+                      <td className="px-3 py-2 text-tinta">{it.product_name}</td>
+                      <td className="px-3 py-2 text-right text-ceniza">{it.quantity}</td>
+                      <td className="px-3 py-2 text-right text-ceniza">{COP(it.unit_price)}</td>
+                      <td className="px-3 py-2 text-right font-medium text-tinta">{COP(it.line_total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-4 border-t border-borde pt-4">
             <Campo label="Subtotal" value={COP(detalle.subtotal)} />
             <Campo label="IVA" value={COP(detalle.iva_total)} />

@@ -4,10 +4,10 @@ const usersController = require('../controllers/users.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
 
-router.use(authMiddleware, requireRole('owner'));
+router.use(authMiddleware);
 
-router.get('/', usersController.list);
-router.post('/', usersController.create);
-router.patch('/:id', usersController.updateActive);
+router.get('/', requireRole('owner', 'empleado'), usersController.list);
+router.post('/', requireRole('owner'), usersController.create);
+router.patch('/:id', requireRole('owner'), usersController.updateActive);
 
 module.exports = router;

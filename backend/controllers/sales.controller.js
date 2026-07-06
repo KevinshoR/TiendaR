@@ -9,11 +9,24 @@ async function list(req, res) {
   try {
     let query = `
       SELECT s.id, s.type, s.status, s.subtotal, s.iva_total, s.total, s.paid_amount, s.due_date, s.created_at,
+        s.payment_method,
         COALESCE(c.name, s.customer_name_libre) AS customer_name, u.name AS user_name,
-        (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) AS items_count
+        au.name AS attended_by_name,
+        (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) AS items_count,
+        (
+          SELECT COALESCE(json_agg(json_build_object(
+            'product_name', p.name,
+            'quantity', si.quantity,
+            'unit_price', si.unit_price,
+            'line_total', si.line_total
+          ) ORDER BY si.id), '[]')
+          FROM sale_items si JOIN products p ON p.id = si.product_id
+          WHERE si.sale_id = s.id
+        ) AS items
       FROM sales s
       LEFT JOIN customers c ON s.customer_id = c.id
       JOIN users u ON s.user_id = u.id
+      LEFT JOIN users au ON s.attended_by = au.id
       WHERE s.store_id = $1
     `;
     const params = [req.user.store_id];
@@ -46,7 +59,7 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
-  const { type, customer_id, customer_name_libre, due_date, notes, items } = req.body;
+  const { type, customer_id, customer_name_libre, due_date, notes, items, payment_method, attended_by } = req.body;
 
   if (!['contado', 'credito'].includes(type)) {
     return res.status(400).json({ message: 'El tipo de venta debe ser contado o crédito' });
@@ -56,6 +69,9 @@ async function create(req, res) {
   }
   if (type === 'credito' && (!customer_id || !due_date)) {
     return res.status(400).json({ message: 'Debe indicar cliente y fecha de vencimiento para ventas a crédito' });
+  }
+  if (!['efectivo', 'transferencia'].includes(payment_method)) {
+    return res.status(400).json({ message: 'El método de pago debe ser efectivo o transferencia' });
   }
 
   const client = await pool.connect();
@@ -76,8 +92,17 @@ async function create(req, res) {
       }
     }
 
+    const attendedById = attended_by ? Number(attended_by) : req.user.id;
+    const attendedResult = await client.query(
+      'SELECT id FROM users WHERE id = $1 AND store_id = $2',
+      [attendedById, req.user.store_id]
+    );
+    if (attendedResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Quién atendió no es válido' });
+    }
+
     let subtotal = 0;
-    let total = 0;
     const preparedItems = [];
 
     for (const item of items) {
@@ -102,27 +127,21 @@ async function create(req, res) {
       }
 
       const unitPrice = Number(product.price);
-      const ivaRate = store.iva_enabled && product.apply_iva
-        ? Number(product.iva_rate !== null && product.iva_rate !== undefined ? product.iva_rate : store.iva_rate)
-        : 0;
       const itemSubtotal = round2(Number(quantity) * unitPrice);
-      const lineTotal = round2(itemSubtotal * (1 + ivaRate / 100));
 
       subtotal += itemSubtotal;
-      total += lineTotal;
 
       preparedItems.push({
         product,
         quantity: Number(quantity),
         unitPrice,
-        ivaRate,
-        lineTotal,
+        lineTotal: itemSubtotal,
       });
     }
 
     subtotal = round2(subtotal);
-    total = round2(total);
-    const ivaTotal = round2(total - subtotal);
+    const total = subtotal;
+    const ivaTotal = 0;
     const status = type === 'contado' ? 'pagada' : 'pendiente';
     const paidAmount = type === 'contado' ? total : 0;
     const nombreLibre =
@@ -131,8 +150,8 @@ async function create(req, res) {
         : null;
 
     const saleResult = await client.query(
-      `INSERT INTO sales (store_id, user_id, customer_id, customer_name_libre, type, subtotal, iva_total, total, paid_amount, status, due_date, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      `INSERT INTO sales (store_id, user_id, customer_id, customer_name_libre, type, subtotal, iva_total, total, paid_amount, status, due_date, notes, payment_method, attended_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
       [
         req.user.store_id,
         req.user.id,
@@ -146,6 +165,8 @@ async function create(req, res) {
         status,
         type === 'credito' ? due_date : null,
         notes || null,
+        payment_method,
+        attendedById,
       ]
     );
     const sale = saleResult.rows[0];
@@ -154,8 +175,8 @@ async function create(req, res) {
     for (const prepared of preparedItems) {
       const itemResult = await client.query(
         `INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, iva_rate, line_total)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [sale.id, prepared.product.id, prepared.quantity, prepared.unitPrice, prepared.ivaRate, prepared.lineTotal]
+         VALUES ($1, $2, $3, $4, 0, $5) RETURNING *`,
+        [sale.id, prepared.product.id, prepared.quantity, prepared.unitPrice, prepared.lineTotal]
       );
       saleItems.push(itemResult.rows[0]);
 

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react'
+import { CheckCircle2, XCircle } from 'lucide-react'
 
 /*
  * Toasts globales: const toast = useToast(); toast.success('...') / toast.error('...')
@@ -22,19 +23,21 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2">
+      <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2.5">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-medium shadow-lg bg-white ${
-              t.type === 'success' ? 'border-esmeralda/40 text-tinta' : 'border-red-300 text-red-600'
+            className={`flex max-w-sm items-start gap-2.5 rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-tinta shadow-lg ${
+              t.type === 'success' ? 'border-esmeralda/40' : 'border-red-300'
             }`}
             style={{ animation: 'toastIn .3s ease both' }}
           >
-            <span className={t.type === 'success' ? 'text-esmeralda' : 'text-red-600'}>
-              {t.type === 'success' ? '✓' : '✕'}
-            </span>
-            {t.message}
+            {t.type === 'success' ? (
+              <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-esmeralda" />
+            ) : (
+              <XCircle size={18} className="mt-0.5 shrink-0 text-red-600" />
+            )}
+            <span>{t.message}</span>
           </div>
         ))}
       </div>

@@ -89,6 +89,8 @@ const statements = [
   )`,
 
   `ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name_libre VARCHAR(150)`,
+  `ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20)`,
+  `ALTER TABLE sales ADD COLUMN IF NOT EXISTS attended_by INTEGER REFERENCES users(id)`,
 
   `CREATE TABLE IF NOT EXISTS sale_items (
     id SERIAL PRIMARY KEY,
