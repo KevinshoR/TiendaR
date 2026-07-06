@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import SortSelect from '../../components/SortSelect'
+import Pagination from '../../components/Pagination'
+import RowActions from '../../components/RowActions'
+import DetailModal, { Campo } from '../../components/DetailModal'
+
+const PAGE_SIZE = 5
 
 const VACIO = { name: '', phone: '', email: '', document: '' }
 
@@ -18,6 +23,9 @@ function Clientes() {
   const [modal, setModal] = useState(null)
   const [loading, setLoading] = useState(false)
   const [orden, setOrden] = useState('recent')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [detalle, setDetalle] = useState(null)
 
   async function cargar() {
     const { data } = await api.get('/customers')
@@ -34,6 +42,17 @@ function Clientes() {
       default: return arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     }
   }, [clientes, orden])
+
+  const clientesFiltrados = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return clientesOrdenados
+    return clientesOrdenados.filter((c) => c.name?.toLowerCase().includes(q))
+  }, [clientesOrdenados, search])
+
+  useEffect(() => { setPage(1) }, [search])
+
+  const totalPaginas = Math.max(1, Math.ceil(clientesFiltrados.length / PAGE_SIZE))
+  const clientesPaginados = clientesFiltrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   async function guardar(e) {
     e.preventDefault()
@@ -59,15 +78,26 @@ function Clientes() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-tinta">Clientes</h1>
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative max-w-sm flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ceniza" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre..."
+              className="w-full rounded-xl border border-borde bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-esmeralda"
+            />
+          </div>
+          <SortSelect value={orden} onChange={setOrden} options={ORDEN_OPCIONES} />
+        </div>
         <button onClick={() => setModal({ ...VACIO })} className="inline-flex items-center gap-2 rounded-xl bg-tinta px-5 py-2.5 text-sm font-bold text-white hover:opacity-90">
           <Plus size={15} /> Nuevo cliente
         </button>
-      </div>
-
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <SortSelect value={orden} onChange={setOrden} options={ORDEN_OPCIONES} />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
@@ -81,24 +111,35 @@ function Clientes() {
             </tr>
           </thead>
           <tbody className="divide-y divide-borde">
-            {clientesOrdenados.map((c) => (
+            {clientesPaginados.map((c) => (
               <tr key={c.id} className="hover:bg-humo/60">
                 <td className="px-5 py-3 font-medium text-tinta">{c.name}</td>
                 <td className="px-5 py-3 text-ceniza">{c.phone || '—'}</td>
                 <td className="px-5 py-3 text-ceniza">{c.document || '—'}</td>
                 <td className="px-5 py-3 text-right">
-                  <button onClick={() => setModal({ ...c })} className="rounded-lg p-2 text-ceniza hover:bg-humo hover:text-tinta">
-                    <Pencil size={15} />
-                  </button>
+                  <RowActions onVer={() => setDetalle(c)} onEditar={() => setModal({ ...c })} />
                 </td>
               </tr>
             ))}
-            {clientesOrdenados.length === 0 && (
+            {clientesFiltrados.length === 0 && (
               <tr><td colSpan={4} className="px-5 py-10 text-center text-ceniza">Aún no tienes clientes. Los necesitas para las ventas a crédito.</td></tr>
             )}
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPaginas} onChange={setPage} />
+
+      {/* Modal ver detalle */}
+      {detalle && (
+        <DetailModal title="Detalle del cliente" onClose={() => setDetalle(null)}>
+          <Campo label="Nombre" value={detalle.name} />
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Teléfono" value={detalle.phone} />
+            <Campo label="Documento" value={detalle.document} />
+          </div>
+          <Campo label="Correo" value={detalle.email} />
+        </DetailModal>
+      )}
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">

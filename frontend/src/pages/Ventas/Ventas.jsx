@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Ban, CheckCircle2 } from 'lucide-react'
+import { PlusCircle, Ban, CheckCircle2, Search } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import { useAuth } from '../../context/AuthContext'
 import SortSelect from '../../components/SortSelect'
 import StatusBadge from '../../components/StatusBadge'
+import Pagination from '../../components/Pagination'
+import RowActions from '../../components/RowActions'
+import DetailModal, { Campo } from '../../components/DetailModal'
+
+const PAGE_SIZE = 5
 
 const COP = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`
 const fecha = (iso) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -23,6 +28,9 @@ function Ventas() {
   const [ventas, setVentas] = useState([])
   const [filtros, setFiltros] = useState({ status: '', from: '', to: '' })
   const [orden, setOrden] = useState('recent')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [detalle, setDetalle] = useState(null)
 
   async function cargar() {
     const params = Object.fromEntries(Object.entries(filtros).filter(([, v]) => v))
@@ -41,6 +49,17 @@ function Ventas() {
       default: return arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     }
   }, [ventas, orden])
+
+  const ventasFiltradas = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return ventasOrdenadas
+    return ventasOrdenadas.filter((v) => (v.customer_name || 'Mostrador').toLowerCase().includes(q))
+  }, [ventasOrdenadas, search])
+
+  useEffect(() => { setPage(1) }, [search, filtros])
+
+  const totalPaginas = Math.max(1, Math.ceil(ventasFiltradas.length / PAGE_SIZE))
+  const ventasPaginadas = ventasFiltradas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   async function anular(v) {
     if (!confirm(`¿Anular la venta #${v.id} por ${COP(v.total)}? El stock se devuelve al inventario.`)) return
@@ -68,8 +87,33 @@ function Ventas() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-tinta">Ventas</h1>
+      </div>
+
+      {/* Controles */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative max-w-sm flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ceniza" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por cliente..."
+              className="w-full rounded-xl border border-borde bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-esmeralda"
+            />
+          </div>
+          <select value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })} className={input}>
+            <option value="">Todos los estados</option>
+            <option value="pagada">Pagadas</option>
+            <option value="pendiente">Pendientes (fiado)</option>
+            <option value="anulada">Anuladas</option>
+          </select>
+          <input type="date" value={filtros.from} onChange={(e) => setFiltros({ ...filtros, from: e.target.value })} className={input} />
+          <span className="text-sm text-ceniza">a</span>
+          <input type="date" value={filtros.to} onChange={(e) => setFiltros({ ...filtros, to: e.target.value })} className={input} />
+          <SortSelect value={orden} onChange={setOrden} options={ORDEN_OPCIONES} />
+        </div>
         {user?.role !== 'contador' && (
           <Link to="/ventas/nueva" className="inline-flex items-center gap-2 rounded-xl bg-esmeralda px-5 py-2.5 text-sm font-black text-tinta hover:brightness-110">
             <PlusCircle size={15} /> Nueva venta
@@ -77,36 +121,24 @@ function Ventas() {
         )}
       </div>
 
-      {/* Filtros */}
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <select value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })} className={input}>
-          <option value="">Todos los estados</option>
-          <option value="pagada">Pagadas</option>
-          <option value="pendiente">Pendientes (fiado)</option>
-          <option value="anulada">Anuladas</option>
-        </select>
-        <input type="date" value={filtros.from} onChange={(e) => setFiltros({ ...filtros, from: e.target.value })} className={input} />
-        <span className="text-sm text-ceniza">a</span>
-        <input type="date" value={filtros.to} onChange={(e) => setFiltros({ ...filtros, to: e.target.value })} className={input} />
-        <SortSelect value={orden} onChange={setOrden} options={ORDEN_OPCIONES} />
-      </div>
-
       <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-ceniza">
-              <th className="px-5 py-3.5">Fecha</th>
               <th className="px-5 py-3.5">Cliente</th>
               <th className="px-5 py-3.5">Tipo</th>
               <th className="px-5 py-3.5">Estado</th>
               <th className="px-5 py-3.5 text-right">Total</th>
+              <th className="px-5 py-3.5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borde">
-            {ventasOrdenadas.map((v) => (
+            {ventasPaginadas.map((v) => (
               <tr key={v.id} className="hover:bg-humo/60">
-                <td className="px-5 py-3 text-ceniza">{fecha(v.created_at)}</td>
-                <td className="px-5 py-3 font-medium text-tinta">{v.customer_name || 'Mostrador'}</td>
+                <td className="px-5 py-3">
+                  <p className="font-medium text-tinta">{v.customer_name || 'Mostrador'}</p>
+                  <p className="text-xs text-ceniza">{fecha(v.created_at)}</p>
+                </td>
                 <td className="px-5 py-3 capitalize text-ceniza">{v.type}{v.type === 'credito' && v.due_date ? ` · vence ${new Date(v.due_date).toLocaleDateString('es-CO')}` : ''}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-1.5">
@@ -126,14 +158,44 @@ function Ventas() {
                   </div>
                 </td>
                 <td className="px-5 py-3 text-right font-bold text-tinta">{COP(v.total)}</td>
+                <td className="px-5 py-3 text-right">
+                  <RowActions onVer={() => setDetalle(v)} />
+                </td>
               </tr>
             ))}
-            {ventasOrdenadas.length === 0 && (
+            {ventasFiltradas.length === 0 && (
               <tr><td colSpan={5} className="px-5 py-10 text-center text-ceniza">No hay ventas con esos filtros.</td></tr>
             )}
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPaginas} onChange={setPage} />
+
+      {/* Modal ver detalle */}
+      {detalle && (
+        <DetailModal title={`Venta #${detalle.id}`} onClose={() => setDetalle(null)}>
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Cliente" value={detalle.customer_name || 'Mostrador'} />
+            <Campo label="Fecha" value={fecha(detalle.created_at)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Tipo" value={detalle.type === 'credito' ? 'Crédito' : 'Contado'} />
+            <Campo label="Estado" value={<StatusBadge status={detalle.status} />} />
+          </div>
+          {detalle.type === 'credito' && detalle.due_date && (
+            <Campo label="Fecha de vencimiento" value={new Date(detalle.due_date).toLocaleDateString('es-CO')} />
+          )}
+          <Campo
+            label="Productos vendidos"
+            value={`${detalle.items_count} producto${Number(detalle.items_count) === 1 ? '' : 's'}`}
+          />
+          <div className="grid grid-cols-3 gap-4 border-t border-borde pt-4">
+            <Campo label="Subtotal" value={COP(detalle.subtotal)} />
+            <Campo label="IVA" value={COP(detalle.iva_total)} />
+            <Campo label="Total" value={COP(detalle.total)} />
+          </div>
+        </DetailModal>
+      )}
     </div>
   )
 }

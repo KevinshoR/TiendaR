@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
-import { Plus, Eye, EyeOff } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Plus, Eye, EyeOff, Search } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
+import Pagination from '../../components/Pagination'
+import RowActions from '../../components/RowActions'
+import DetailModal, { Campo } from '../../components/DetailModal'
+
+const PAGE_SIZE = 5
 
 const VACIO = { name: '', email: '', password: '', role: 'empleado' }
 const ROL = {
@@ -16,6 +21,9 @@ function Empleados() {
   const [modal, setModal] = useState(null)
   const [ver, setVer] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [detalle, setDetalle] = useState(null)
 
   async function cargar() {
     const { data } = await api.get('/users')
@@ -39,6 +47,17 @@ function Empleados() {
     }
   }
 
+  const usuariosFiltrados = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return usuarios
+    return usuarios.filter((u) => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+  }, [usuarios, search])
+
+  useEffect(() => { setPage(1) }, [search])
+
+  const totalPaginas = Math.max(1, Math.ceil(usuariosFiltrados.length / PAGE_SIZE))
+  const usuariosPaginados = usuariosFiltrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
   async function toggleActivo(u) {
     try {
       await api.patch(`/users/${u.id}`, { active: !u.active })
@@ -53,52 +72,76 @@ function Empleados() {
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-2">
         <h1 className="font-display text-2xl font-bold text-tinta">Tu equipo</h1>
-        <button onClick={() => { setModal({ ...VACIO }); setVer(false) }} className="inline-flex items-center gap-2 rounded-xl bg-tinta px-5 py-2.5 text-sm font-bold text-white hover:opacity-90">
-          <Plus size={15} /> Agregar persona
-        </button>
       </div>
       <p className="mb-6 text-sm text-ceniza">
         Los <strong className="text-tinta">empleados</strong> pueden vender y manejar inventario. El{' '}
         <strong className="text-tinta">contador</strong> solo puede ver el dashboard y las ventas — no puede modificar nada.
       </p>
 
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ceniza" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o correo..."
+            className="w-full rounded-xl border border-borde bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-esmeralda"
+          />
+        </div>
+        <button onClick={() => { setModal({ ...VACIO }); setVer(false) }} className="inline-flex items-center gap-2 rounded-xl bg-tinta px-5 py-2.5 text-sm font-bold text-white hover:opacity-90">
+          <Plus size={15} /> Agregar persona
+        </button>
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-ceniza">
               <th className="px-5 py-3.5">Nombre</th>
-              <th className="px-5 py-3.5">Correo</th>
               <th className="px-5 py-3.5">Rol</th>
-              <th className="px-5 py-3.5">Estado</th>
               <th className="px-5 py-3.5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borde">
-            {usuarios.map((u) => {
+            {usuariosPaginados.map((u) => {
               const rol = ROL[u.role] || ROL.empleado
               return (
                 <tr key={u.id} className="hover:bg-humo/60">
-                  <td className="px-5 py-3 font-medium text-tinta">{u.name}</td>
-                  <td className="px-5 py-3 text-ceniza">{u.email}</td>
-                  <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${rol.cls}`}>{rol.label}</span></td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs font-bold ${u.active ? 'text-esmeralda' : 'text-red-600'}`}>{u.active ? 'Activo' : 'Desactivado'}</span>
+                    <p className="font-medium text-tinta">{u.name}</p>
+                    <p className="text-xs text-ceniza">{u.email}</p>
                   </td>
+                  <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${rol.cls}`}>{rol.label}</span></td>
                   <td className="px-5 py-3 text-right">
-                    {u.role !== 'owner' && (
-                      <button onClick={() => toggleActivo(u)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${u.active ? 'text-red-600 hover:bg-red-50' : 'text-esmeralda hover:bg-esmeralda/10'}`}>
-                        {u.active ? 'Desactivar' : 'Reactivar'}
-                      </button>
-                    )}
+                    <RowActions
+                      onVer={() => setDetalle(u)}
+                      estado={u.role !== 'owner' ? { checked: !!u.active, onChange: () => toggleActivo(u) } : undefined}
+                    />
                   </td>
                 </tr>
               )
             })}
+            {usuariosFiltrados.length === 0 && (
+              <tr><td colSpan={3} className="px-5 py-10 text-center text-ceniza">Sin coincidencias.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPaginas} onChange={setPage} />
+
+      {/* Modal ver detalle */}
+      {detalle && (
+        <DetailModal title="Detalle del empleado" onClose={() => setDetalle(null)}>
+          <Campo label="Nombre" value={detalle.name} />
+          <Campo label="Correo" value={detalle.email} />
+          <div className="grid grid-cols-2 gap-4">
+            <Campo label="Rol" value={(ROL[detalle.role] || ROL.empleado).label} />
+            <Campo label="Estado" value={detalle.active ? 'Activo' : 'Desactivado'} />
+          </div>
+        </DetailModal>
+      )}
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">

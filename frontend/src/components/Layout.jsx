@@ -23,13 +23,12 @@ import { useAuth } from '../context/AuthContext'
  */
 
 const MODULOS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'empleado', 'contador'], end: true },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'empleado', 'contador'], end: true },
   { to: '/ventas/nueva', label: 'Nueva venta', icon: PlusCircle, roles: ['owner', 'empleado'], cta: true },
   { to: '/inventario', label: 'Inventario', icon: Package, roles: ['owner', 'empleado'] },
   { to: '/ventas', label: 'Ventas', icon: Receipt, roles: ['owner', 'empleado', 'contador'] },
   { to: '/clientes', label: 'Clientes', icon: Users, roles: ['owner', 'empleado'] },
   { to: '/empleados', label: 'Empleados', icon: UserCog, roles: ['owner'] },
-  { to: '/configuracion', label: 'Configuración', icon: Settings, roles: ['owner'] },
 ]
 
 const ROL_LABEL = { owner: 'Dueño', empleado: 'Empleado', contador: 'Contador' }
@@ -97,6 +96,13 @@ function Layout() {
             <p className="truncate text-sm font-semibold text-white">{user?.name}</p>
             <p className="text-[11px] text-white/40">{ROL_LABEL[user?.role] || user?.role}</p>
           </div>
+          <button
+            onClick={() => navigate('/configuracion')}
+            title="Configuración"
+            className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <Settings size={16} />
+          </button>
           <button
             onClick={salir}
             title="Cerrar sesión"
