@@ -165,6 +165,7 @@ const statements = [
     sent_at TIMESTAMP DEFAULT NOW()
   )`,
   `ALTER TABLE payment_reminders_log ADD COLUMN IF NOT EXISTS tipo VARCHAR(20)`,
+  `ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS reference_id INT`,
 
   `CREATE INDEX IF NOT EXISTS idx_users_store_id ON users(store_id)`,
   `CREATE INDEX IF NOT EXISTS idx_products_store_id ON products(store_id)`,

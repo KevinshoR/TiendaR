@@ -122,9 +122,9 @@ async function create(req, res) {
       );
 
       await client.query(
-        `INSERT INTO inventory_movements (store_id, product_id, user_id, type, quantity, reason)
-         VALUES ($1, $2, $3, 'entrada', $4, 'compra')`,
-        [req.user.store_id, prepared.product.id, req.user.id, prepared.quantity]
+        `INSERT INTO inventory_movements (store_id, product_id, user_id, type, quantity, reason, reference_id)
+         VALUES ($1, $2, $3, 'entrada', $4, 'compra', $5)`,
+        [req.user.store_id, prepared.product.id, req.user.id, prepared.quantity, purchase.id]
       );
     }
 

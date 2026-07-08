@@ -13,6 +13,7 @@ import {
   X,
   ShoppingBag,
   HandCoins,
+  Boxes,
   TrendingDown,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'

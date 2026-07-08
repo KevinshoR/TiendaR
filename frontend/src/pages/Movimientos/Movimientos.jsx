@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, ArrowDownCircle, ArrowUpCircle, RefreshCw, Package, TrendingUp, TrendingDown } from 'lucide-react'
+import { Search, ArrowDownCircle, ArrowUpCircle, RefreshCw, Package, TrendingUp, TrendingDown, Eye, X, Calendar, User } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
+import RowActions from '../../components/RowActions'
 import Pagination from '../../components/Pagination'
 
 /* ═══════════════════════════════════════════════════════════
@@ -10,6 +11,8 @@ import Pagination from '../../components/Pagination'
    registrado. Es solo lectura — la data se genera sola desde
    Compras y Ventas.
 ═══════════════════════════════════════════════════════════ */
+
+const COP = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`
 
 const fecha = (iso) =>
   new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -48,6 +51,7 @@ function CantidadMovimiento({ tipo, quantity }) {
 export default function Movimientos() {
   const toast = useToast()
   const [movimientos, setMovimientos] = useState([])
+  const [detalle, setDetalle] = useState(null)
   const [buscar, setBuscar] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [rango, setRango] = useState({ from: '', to: '' })
@@ -103,7 +107,7 @@ export default function Movimientos() {
             <span className="rounded-lg bg-esmeralda/10 p-2 text-esmeralda"><TrendingUp size={15} /></span>
           </div>
           <p className="mt-2 font-display text-2xl font-bold text-tinta">
-            <span className="text-esmeralda">+</span>{stats.entradas}
+            <span className="text-esmeralda">+</span>{Math.abs(stats.entradas)}
           </p>
           <p className="text-xs text-ceniza">unidades ingresadas</p>
         </div>
@@ -113,7 +117,7 @@ export default function Movimientos() {
             <span className="rounded-lg bg-red-100 p-2 text-red-600"><TrendingDown size={15} /></span>
           </div>
           <p className="mt-2 font-display text-2xl font-bold text-tinta">
-            <span className="text-red-600">-</span>{stats.salidas}
+            <span className="text-red-600">-</span>{Math.abs(stats.salidas)}
           </p>
           <p className="text-xs text-ceniza">unidades vendidas/salidas</p>
         </div>
@@ -182,6 +186,7 @@ export default function Movimientos() {
               <th className="px-5 py-3.5">Razón</th>
               <th className="px-5 py-3.5">Usuario</th>
               <th className="px-5 py-3.5 text-right">Cantidad</th>
+              <th className="px-5 py-3.5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borde">
@@ -197,11 +202,14 @@ export default function Movimientos() {
                 <td className="px-5 py-3 text-right text-lg">
                   <CantidadMovimiento tipo={m.type} quantity={m.quantity} />
                 </td>
+                <td className="ps-5 py-3">
+                  <RowActions onVer={() => setDetalle(m)} />
+                </td>
               </tr>
             ))}
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-ceniza">
+                <td colSpan={6} className="px-5 py-10 text-center text-ceniza">
                   {movimientos.length === 0
                     ? 'Aún no hay movimientos. Se registran solos cuando haces compras o ventas.'
                     : 'Sin resultados con esos filtros.'}
@@ -213,6 +221,96 @@ export default function Movimientos() {
       </div>
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      {detalle && <ModalDetalleMovimiento movimiento={detalle} onClose={() => setDetalle(null)} />}
+    </div>
+  )
+}
+function ModalDetalleMovimiento({ movimiento, onClose }) {
+  const esSuma = movimiento.type === 'entrada' || (movimiento.type === 'ajuste' && movimiento.quantity > 0)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white">
+        <div className="flex items-center justify-between border-b border-borde bg-tinta px-7 py-5 text-white">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-esmeralda">Detalle del movimiento</p>
+            <h2 className="mt-0.5 font-display text-lg font-bold">{movimiento.product_name || 'Producto eliminado'}</h2>
+          </div>
+          <button onClick={onClose} className="text-white/60 hover:text-white"><X size={22} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-7">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-borde bg-humo/40 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ceniza">
+                <Calendar size={11} /> Fecha
+              </div>
+              <p className="text-sm font-semibold text-tinta">{fecha(movimiento.created_at)}</p>
+            </div>
+            <div className="rounded-xl border border-borde bg-humo/40 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ceniza">
+                <User size={11} /> Registrado por
+              </div>
+              <p className="text-sm font-semibold text-tinta">{movimiento.user_name || '—'}</p>
+            </div>
+            <div className="rounded-xl border border-borde bg-humo/40 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ceniza">
+                <Package size={11} /> Tipo
+              </div>
+              <div className="mt-0.5"><BadgeTipo tipo={movimiento.type} /></div>
+            </div>
+            <div className="rounded-xl border border-borde bg-humo/40 p-3">
+              <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-ceniza">
+                Razón
+              </div>
+              <p className="text-sm font-semibold text-tinta capitalize">{movimiento.reason || '—'}</p>
+            </div>
+          </div>
+
+          {movimiento.reason === 'compra' && movimiento.purchase_total && (
+            <>
+              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wide text-ceniza">Origen</p>
+              <div className="rounded-xl border border-borde bg-humo/40 p-4">
+                <p className="font-semibold text-tinta">Vino de una compra</p>
+                <p className="text-xs text-ceniza">{movimiento.purchase_supplier || 'Sin proveedor'}</p>
+                <p className="text-xs text-ceniza">Compra por {COP(movimiento.purchase_total)}</p>
+              </div>
+            </>
+          )}
+
+          {movimiento.type === 'venta' && movimiento.sale_total && (
+            <>
+              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wide text-ceniza">Origen</p>
+              <div className="rounded-xl border border-borde bg-humo/40 p-4">
+                <p className="font-semibold text-tinta">Vendido a</p>
+                <p className="text-xs text-ceniza">{movimiento.sale_customer_name || movimiento.sale_customer_libre || 'Cliente ocasional'}</p>
+                <p className="text-xs text-ceniza">
+                  Venta por {COP(movimiento.sale_total)} ({movimiento.sale_type === 'credito' ? 'crédito' : 'contado'})
+                </p>
+              </div>
+            </>
+          )}
+
+          {movimiento.reason === 'anulación de venta' && movimiento.sale_total && (
+            <>
+              <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wide text-ceniza">Origen</p>
+              <div className="rounded-xl border border-borde bg-humo/40 p-4">
+                <p className="font-semibold text-tinta">Devuelto por anulación</p>
+                <p className="text-xs text-ceniza">{movimiento.sale_customer_name || movimiento.sale_customer_libre || 'Cliente ocasional'}</p>
+                <p className="text-xs text-ceniza">Venta anulada por {COP(movimiento.sale_total)}</p>
+              </div>
+            </>
+          )}
+
+          <div className="mt-5 rounded-xl bg-humo p-5">
+            <div className="flex items-baseline justify-between">
+              <span className="font-display text-sm font-semibold text-tinta">CANTIDAD</span>
+              <span className={`font-display text-2xl font-bold ${esSuma ? 'text-esmeralda' : 'text-red-600'}`}>
+                {esSuma ? '+' : '-'}{Math.abs(movimiento.quantity)} und
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
