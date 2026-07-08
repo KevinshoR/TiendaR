@@ -12,6 +12,8 @@ const purchasesRoutes = require('./routes/purchases.routes');
 const storeRoutes = require('./routes/store.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const publicRoutes = require('./routes/public.routes');
+const expensesRoutes = require('./routes/expenses.routes');
+const { iniciarJobRecordatorios, ejecutarRecordatorios } = require('./jobs/paymentReminders.job');
 
 const app = express();
 
@@ -32,6 +34,12 @@ app.use('/api/purchases', purchasesRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/expenses', expensesRoutes);
+
+iniciarJobRecordatorios();
+if (process.env.NODE_ENV === 'development' && process.env.TEST_REMINDERS === 'true') {
+  ejecutarRecordatorios();
+}
 
 const PORT = process.env.PORT || 5000;
 

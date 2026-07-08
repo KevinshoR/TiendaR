@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import Egresos from './pages/Egresos/Egresos'
+import Movimientos from './pages/Movimientos/Movimientos'
 import Landing from './pages/Landing'
 import Login from './pages/Login/Login'
 import Registro from './pages/Registro/Registro'
@@ -26,7 +28,9 @@ export default function App() {
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/inventario" element={<Inventario />} />
+        <Route path="/egresos" element={<Egresos />} />
         <Route path="/ventas" element={<Ventas />} />
+        <Route path="/movimientos" element={<Movimientos />} />
         <Route path="/cobranza" element={<Cobranza />} />
         <Route path="/ventas/nueva" element={<NuevaVenta />} />
         <Route path="/compras" element={<Compras />} />

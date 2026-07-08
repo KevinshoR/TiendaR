@@ -12,5 +12,6 @@ router.patch('/:id/pay', requireRole('owner'), salesController.pay);
 router.patch('/:id/cancel', requireRole('owner'), salesController.cancel);
 router.post('/:id/payments', requireRole('owner', 'empleado'), salesController.addPayment);
 router.get('/:id/payments', requireRole('owner', 'empleado'), salesController.listPayments);
+router.post('/:id/remind', requireRole('owner', 'empleado'), salesController.remind);
 
 module.exports = router;

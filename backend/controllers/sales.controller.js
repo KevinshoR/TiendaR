@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { enviarRecordatorio } = require('../utils/mailer');
 
 function round2(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -371,4 +372,47 @@ async function listPayments(req, res) {
   }
 }
 
-module.exports = { list, create, cancel, pay, addPayment, listPayments };
+async function remind(req, res) {
+  const { id } = req.params;
+  try {
+    const saleResult = await pool.query(
+      `SELECT s.id, s.type, s.status, s.total, s.paid_amount, s.due_date, s.customer_id,
+        c.name AS customer_name, c.email AS customer_email
+       FROM sales s
+       LEFT JOIN customers c ON s.customer_id = c.id
+       WHERE s.id = $1 AND s.store_id = $2`,
+      [id, req.user.store_id]
+    );
+    const sale = saleResult.rows[0];
+    if (!sale) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    if (sale.type !== 'credito' || sale.status !== 'pendiente') {
+      return res.status(400).json({ message: 'Esta venta no admite recordatorios' });
+    }
+    if (!sale.customer_id) {
+      return res.status(400).json({ message: 'Esta venta no tiene un cliente registrado' });
+    }
+    if (!sale.customer_email) {
+      return res.status(400).json({ message: 'Este cliente no tiene correo registrado. Agrégaselo en el módulo Clientes.' });
+    }
+
+    const storeResult = await pool.query('SELECT name FROM stores WHERE id = $1', [req.user.store_id]);
+    const tiendaNombre = storeResult.rows[0]?.name || 'Tu tienda';
+    const saldo = round2(Number(sale.total) - Number(sale.paid_amount));
+
+    await enviarRecordatorio(sale.customer_email, sale.customer_name, tiendaNombre, saldo, sale.due_date, 'manual');
+
+    await pool.query(
+      `INSERT INTO payment_reminders_log (store_id, sale_id, sent_to, tipo) VALUES ($1, $2, $3, 'manual')`,
+      [req.user.store_id, sale.id, sale.customer_email]
+    );
+
+    return res.json({ message: `Recordatorio enviado a ${sale.customer_email}` });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Error enviando el recordatorio' });
+  }
+}
+
+module.exports = { list, create, cancel, pay, addPayment, listPayments, remind };

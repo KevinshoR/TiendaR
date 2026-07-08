@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, EyeOff, Search } from 'lucide-react'
+import { Plus, Eye, EyeOff, Search, Mail, Shield, CheckCircle2, XCircle } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import Pagination from '../../components/Pagination'
 import RowActions from '../../components/RowActions'
-import DetailModal, { Campo } from '../../components/DetailModal'
+import DetailModal, { Campo, InfoCard } from '../../components/DetailModal'
 
 const PAGE_SIZE = 5
 
@@ -133,12 +133,17 @@ function Empleados() {
 
       {/* Modal ver detalle */}
       {detalle && (
-        <DetailModal title="Detalle del empleado" onClose={() => setDetalle(null)}>
-          <Campo label="Nombre" value={detalle.name} />
-          <Campo label="Correo" value={detalle.email} />
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Rol" value={(ROL[detalle.role] || ROL.empleado).label} />
-            <Campo label="Estado" value={detalle.active ? 'Activo' : 'Desactivado'} />
+        <DetailModal kicker="Detalle de empleado" title={detalle.name} onClose={() => setDetalle(null)} maxWidth="max-w-lg">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <InfoCard icon={Mail} label="Correo" valor={detalle.email} />
+            <InfoCard icon={Shield} label="Rol" valor={(ROL[detalle.role] || ROL.empleado).label} />
+            <InfoCard icon={detalle.active ? CheckCircle2 : XCircle} label="Estado" valor={detalle.active ? 'Activo' : 'Desactivado'} />
+          </div>
+          <div className="mt-6">
+            <Campo
+              label="Fecha de creación"
+              value={detalle.created_at ? new Date(detalle.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : null}
+            />
           </div>
         </DetailModal>
       )}

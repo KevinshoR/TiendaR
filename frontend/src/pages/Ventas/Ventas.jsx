@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Ban, CheckCircle2, Search } from 'lucide-react'
+import { PlusCircle, Ban, CheckCircle2, Search, Calendar, CreditCard, User, Tag } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import { useAuth } from '../../context/AuthContext'
@@ -8,7 +8,7 @@ import SortSelect from '../../components/SortSelect'
 import StatusBadge from '../../components/StatusBadge'
 import Pagination from '../../components/Pagination'
 import RowActions from '../../components/RowActions'
-import DetailModal, { Campo } from '../../components/DetailModal'
+import DetailModal, { InfoCard } from '../../components/DetailModal'
 
 const PAGE_SIZE = 5
 
@@ -175,51 +175,59 @@ function Ventas() {
 
       {/* Modal ver detalle */}
       {detalle && (
-        <DetailModal title={`Venta #${detalle.id}`} onClose={() => setDetalle(null)}>
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Cliente" value={detalle.customer_name || 'Mostrador'} />
-            <Campo label="Fecha" value={fecha(detalle.created_at)} />
+        <DetailModal kicker={`Detalle de venta #${detalle.id}`} title={detalle.customer_name || 'Mostrador'} onClose={() => setDetalle(null)}>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <InfoCard icon={Calendar} label="Fecha" valor={fecha(detalle.created_at)} />
+            <InfoCard icon={Tag} label="Tipo" valor={detalle.type === 'credito' ? 'Crédito' : 'Contado'} />
+            <InfoCard icon={CheckCircle2} label="Estado" valor={<StatusBadge status={detalle.status} />} />
+            <InfoCard icon={CreditCard} label="Método de pago" valor={PAGO_LABEL[detalle.payment_method] || detalle.payment_method || '—'} />
+            <InfoCard icon={User} label="Atendido por" valor={detalle.attended_by_name || '—'} />
+            {detalle.type === 'credito' && detalle.due_date && (
+              <InfoCard icon={Calendar} label="Vencimiento" valor={new Date(detalle.due_date).toLocaleDateString('es-CO')} />
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Tipo" value={detalle.type === 'credito' ? 'Crédito' : 'Contado'} />
-            <Campo label="Estado" value={<StatusBadge status={detalle.status} />} />
-          </div>
-          {detalle.type === 'credito' && detalle.due_date && (
-            <Campo label="Fecha de vencimiento" value={new Date(detalle.due_date).toLocaleDateString('es-CO')} />
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Método de pago" value={PAGO_LABEL[detalle.payment_method] || detalle.payment_method} />
-            <Campo label="Atendido por" value={detalle.attended_by_name} />
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ceniza">Productos</p>
-            <div className="overflow-hidden rounded-xl border border-borde">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-borde bg-humo text-left text-xs uppercase tracking-wide text-ceniza">
-                    <th className="px-3 py-2">Producto</th>
-                    <th className="px-3 py-2 text-right">Cant.</th>
-                    <th className="px-3 py-2 text-right">Precio</th>
-                    <th className="px-3 py-2 text-right">Subtotal</th>
+
+          <p className="mt-6 mb-2 text-xs font-bold uppercase tracking-wide text-ceniza">Productos vendidos</p>
+          <div className="overflow-hidden rounded-xl border border-borde">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-borde bg-humo text-left text-[11px] uppercase text-ceniza">
+                  <th className="px-4 py-2.5">Producto</th>
+                  <th className="px-4 py-2.5 text-right">Cant.</th>
+                  <th className="px-4 py-2.5 text-right">Precio</th>
+                  <th className="px-4 py-2.5 text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-borde">
+                {(detalle.items || []).map((it, idx) => (
+                  <tr key={idx}>
+                    <td className="px-4 py-2.5 font-medium text-tinta">{it.product_name}</td>
+                    <td className="px-4 py-2.5 text-right text-ceniza">{it.quantity}</td>
+                    <td className="px-4 py-2.5 text-right text-ceniza">{COP(it.unit_price)}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-tinta">{COP(it.line_total)}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-borde">
-                  {(detalle.items || []).map((it, idx) => (
-                    <tr key={idx}>
-                      <td className="px-3 py-2 text-tinta">{it.product_name}</td>
-                      <td className="px-3 py-2 text-right text-ceniza">{it.quantity}</td>
-                      <td className="px-3 py-2 text-right text-ceniza">{COP(it.unit_price)}</td>
-                      <td className="px-3 py-2 text-right font-medium text-tinta">{COP(it.line_total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="grid grid-cols-3 gap-4 border-t border-borde pt-4">
-            <Campo label="Subtotal" value={COP(detalle.subtotal)} />
-            <Campo label="IVA" value={COP(detalle.iva_total)} />
-            <Campo label="Total" value={COP(detalle.total)} />
+
+          <div className="mt-5 rounded-xl bg-humo p-5">
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-ceniza">Subtotal</span>
+                <span className="font-medium text-tinta">{COP(detalle.subtotal)}</span>
+              </div>
+              {Number(detalle.iva_total) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-ceniza">IVA</span>
+                  <span className="font-medium text-tinta">{COP(detalle.iva_total)}</span>
+                </div>
+              )}
+              <div className="mt-2 flex items-baseline justify-between border-t border-borde pt-3">
+                <span className="font-display text-sm font-semibold text-tinta">TOTAL</span>
+                <span className="font-display text-2xl font-bold text-tinta">{COP(detalle.total)}</span>
+              </div>
+            </div>
           </div>
         </DetailModal>
       )}

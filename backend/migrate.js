@@ -113,6 +113,7 @@ const statements = [
     total NUMERIC(12,2),
     created_at TIMESTAMP DEFAULT NOW()
   )`,
+  `ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount NUMERIC(12,2) DEFAULT 0`,
 
   `CREATE TABLE IF NOT EXISTS purchase_items (
     id SERIAL PRIMARY KEY,
@@ -163,6 +164,7 @@ const statements = [
     sent_to VARCHAR(150),
     sent_at TIMESTAMP DEFAULT NOW()
   )`,
+  `ALTER TABLE payment_reminders_log ADD COLUMN IF NOT EXISTS tipo VARCHAR(20)`,
 
   `CREATE INDEX IF NOT EXISTS idx_users_store_id ON users(store_id)`,
   `CREATE INDEX IF NOT EXISTS idx_products_store_id ON products(store_id)`,

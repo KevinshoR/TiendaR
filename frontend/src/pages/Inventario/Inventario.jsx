@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Search, X, Link2, Upload, ImageOff } from 'lucide-react'
+import { Plus, Search, X, Link2, Upload, ImageOff, DollarSign, Package, Banknote, Eye, EyeOff } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import { useAuth } from '../../context/AuthContext'
 import SortSelect from '../../components/SortSelect'
 import Pagination from '../../components/Pagination'
 import RowActions from '../../components/RowActions'
-import DetailModal, { Campo } from '../../components/DetailModal'
+import DetailModal, { Campo, InfoCard } from '../../components/DetailModal'
 
 const PAGE_SIZE = 5
 
@@ -38,7 +38,7 @@ const VACIO = {
 
 function Inventario() {
   const toast = useToast()
-  const { store } = useAuth()
+  const { store, user } = useAuth()
   const [productos, setProductos] = useState([])
   const [search, setSearch] = useState('')
   const [orden, setOrden] = useState('recent')
@@ -250,7 +250,7 @@ function Inventario() {
 
       {/* Modal ver detalle */}
       {detalle && (
-        <DetailModal title="Detalle del producto" onClose={() => setDetalle(null)}>
+        <DetailModal kicker="Detalle de producto" title={detalle.name} onClose={() => setDetalle(null)}>
           <div className="flex items-center gap-4">
             {detalle.image_url ? (
               <img
@@ -264,25 +264,32 @@ function Inventario() {
               </span>
             )}
             <div>
-              <p className="font-display text-lg font-bold text-tinta">{detalle.name}</p>
-              <p className="font-mono text-xs text-ceniza">{detalle.sku || '—'}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ceniza">SKU</p>
+              <p className="font-mono text-sm font-semibold text-tinta">{detalle.sku || '—'}</p>
             </div>
           </div>
-          <Campo label="Descripción" value={detalle.description} />
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Precio" value={COP(detalle.price)} />
-            <Campo label="Costo" value={COP(detalle.cost)} />
+
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <InfoCard icon={DollarSign} label="Precio" valor={COP(detalle.price)} />
+            <InfoCard icon={Package} label="Stock" valor={`${detalle.stock} (mín. ${detalle.min_stock})`} />
+            {(user?.role === 'owner' || user?.role === 'contador') && (
+              <InfoCard icon={Banknote} label="Costo" valor={COP(detalle.cost)} />
+            )}
+            <InfoCard
+              icon={detalle.show_in_catalog ? Eye : EyeOff}
+              label="Estado"
+              valor={detalle.show_in_catalog ? 'Visible' : 'Oculto'}
+            />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Stock" value={detalle.stock} />
-            <Campo label="Stock mínimo" value={detalle.min_stock} />
+
+          <div className="mt-6 flex flex-col gap-4">
+            <Campo label="Descripción" value={detalle.description} />
+            {detalle.sizes && <Campo label="Tallas" value={detalle.sizes} />}
+            <Campo
+              label="Fecha de creación"
+              value={detalle.created_at ? new Date(detalle.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : null}
+            />
           </div>
-          <Campo label="Tallas" value={detalle.sizes} />
-          <Campo label="Visible en catálogo" value={detalle.show_in_catalog ? 'Sí' : 'No'} />
-          <Campo
-            label="Fecha de creación"
-            value={detalle.created_at ? new Date(detalle.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : null}
-          />
         </DetailModal>
       )}
 

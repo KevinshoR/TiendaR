@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Phone, FileText, Mail } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/Toast'
 import SortSelect from '../../components/SortSelect'
 import Pagination from '../../components/Pagination'
 import RowActions from '../../components/RowActions'
-import DetailModal, { Campo } from '../../components/DetailModal'
+import DetailModal, { InfoCard } from '../../components/DetailModal'
 
 const PAGE_SIZE = 5
 
@@ -131,13 +131,12 @@ function Clientes() {
 
       {/* Modal ver detalle */}
       {detalle && (
-        <DetailModal title="Detalle del cliente" onClose={() => setDetalle(null)}>
-          <Campo label="Nombre" value={detalle.name} />
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Teléfono" value={detalle.phone} />
-            <Campo label="Documento" value={detalle.document} />
+        <DetailModal kicker="Detalle de cliente" title={detalle.name} onClose={() => setDetalle(null)} maxWidth="max-w-lg">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <InfoCard icon={Phone} label="Teléfono" valor={detalle.phone || '—'} />
+            <InfoCard icon={FileText} label="Documento" valor={detalle.document || '—'} />
+            <InfoCard icon={Mail} label="Correo" valor={detalle.email || '—'} />
           </div>
-          <Campo label="Correo" value={detalle.email} />
         </DetailModal>
       )}
 

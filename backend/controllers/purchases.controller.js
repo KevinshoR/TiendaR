@@ -7,7 +7,7 @@ function round2(value) {
 async function list(req, res) {
   try {
     const query = `
-      SELECT p.id, p.supplier, p.iva_rate, p.subtotal, p.iva_total, p.total, p.created_at,
+      SELECT p.id, p.supplier, p.iva_rate, p.discount, p.subtotal, p.iva_total, p.total, p.created_at,
         u.name AS user_name,
         (SELECT COUNT(*) FROM purchase_items pi WHERE pi.purchase_id = p.id) AS items_count,
         (
@@ -37,10 +37,15 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
-  const { supplier, iva_rate, items } = req.body;
+  const { supplier, iva_rate, items, discount } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: 'Debe incluir al menos un producto en la compra' });
+  }
+
+  const discountNum = discount ? Number(discount) : 0;
+  if (discountNum < 0) {
+    return res.status(400).json({ message: 'El descuento no puede ser negativo' });
   }
 
   const client = await pool.connect();
@@ -84,14 +89,21 @@ async function create(req, res) {
     }
 
     subtotal = round2(subtotal);
+
+    if (discountNum > subtotal) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'El descuento no puede superar el subtotal' });
+    }
+
+    const base = round2(subtotal - discountNum);
     const ivaRateNum = iva_rate ? Number(iva_rate) : null;
-    const ivaTotal = ivaRateNum ? round2(subtotal * (ivaRateNum / 100)) : 0;
-    const total = round2(subtotal + ivaTotal);
+    const ivaTotal = ivaRateNum ? round2(base * (ivaRateNum / 100)) : 0;
+    const total = round2(base + ivaTotal);
 
     const purchaseResult = await client.query(
-      `INSERT INTO purchases (store_id, user_id, supplier, iva_rate, subtotal, iva_total, total)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [req.user.store_id, req.user.id, supplier || null, ivaRateNum, subtotal, ivaTotal, total]
+      `INSERT INTO purchases (store_id, user_id, supplier, iva_rate, discount, subtotal, iva_total, total)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [req.user.store_id, req.user.id, supplier || null, ivaRateNum, discountNum, subtotal, ivaTotal, total]
     );
     const purchase = purchaseResult.rows[0];
 
