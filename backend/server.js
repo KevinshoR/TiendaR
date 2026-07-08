@@ -2,7 +2,7 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-
+const inventoryMovementsRoutes = require('./routes/inventoryMovements.routes');
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const productsRoutes = require('./routes/products.routes');
@@ -18,6 +18,7 @@ const { iniciarJobRecordatorios, ejecutarRecordatorios } = require('./jobs/payme
 const app = express();
 
 app.use(cors());
+app.use('/api/inventory-movements', inventoryMovementsRoutes);
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
