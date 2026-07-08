@@ -1,22 +1,31 @@
-import { useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Package,
-  Receipt,
+  Layers,
+  ShoppingBag,
+  ShoppingCart,
   PlusCircle,
+  Receipt,
+  HandCoins,
   Users,
+  User,
   UserCog,
+  Wallet,
+  TrendingDown,
+  ChevronRight,
+  ChevronDown,
+  ExternalLink,
+  Home,
+  Boxes,
   Settings,
   LogOut,
   Menu,
   X,
-  ShoppingBag,
-  HandCoins,
-  Boxes,
-  TrendingDown,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import api from '../services/api'
 
 /*
  * Layout con sidebar oscura (#161616 = tinta). Los módulos visibles
@@ -26,17 +35,43 @@ import { useAuth } from '../context/AuthContext'
  *  - contador: solo Dashboard y Ventas (lectura)
  */
 
-const MODULOS = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'empleado', 'contador'], end: true },
-  { to: '/cobranza', label: 'Cobranza', icon: HandCoins, roles: ['owner', 'empleado'] },
-  { to: '/movimientos', label: 'Movimientos', icon: Boxes, roles: ['owner', 'contador'] },
-  { to: '/egresos', label: 'Egresos', icon: TrendingDown, roles: ['owner', 'contador'] },
-  { to: '/ventas/nueva', label: 'Nueva venta', icon: PlusCircle, roles: ['owner', 'empleado'], cta: true },
-  { to: '/inventario', label: 'Inventario', icon: Package, roles: ['owner', 'empleado'] },
-  { to: '/compras', label: 'Compras', icon: ShoppingBag, roles: ['owner', 'empleado'] },
-  { to: '/ventas', label: 'Ventas', icon: Receipt, roles: ['owner', 'empleado', 'contador'] },
-  { to: '/clientes', label: 'Clientes', icon: Users, roles: ['owner', 'empleado'] },
-  { to: '/empleados', label: 'Empleados', icon: UserCog, roles: ['owner'] },
+const MENU = [
+  { type: 'item', to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'empleado', 'contador'] },
+  {
+    type: 'group',
+    label: 'Operaciones',
+    icon: Package,
+    children: [
+      { to: '/inventario', label: 'Inventario', icon: Boxes, roles: ['owner', 'empleado', 'contador'] },
+      { to: '/movimientos', label: 'Movimientos', icon: Layers, roles: ['owner', 'empleado', 'contador'] },
+      { to: '/compras', label: 'Compras', icon: ShoppingBag, roles: ['owner', 'empleado'] },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'Ventas',
+    icon: ShoppingCart,
+    children: [
+      { to: '/ventas/nueva', label: 'Nueva venta', icon: PlusCircle, roles: ['owner', 'empleado'] },
+      { to: '/ventas', label: 'Ventas', icon: Receipt, roles: ['owner', 'empleado', 'contador'] },
+      { to: '/cobranza', label: 'Cobranza', icon: HandCoins, roles: ['owner', 'empleado'] },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'Personas',
+    icon: Users,
+    children: [
+      { to: '/clientes', label: 'Clientes', icon: User, roles: ['owner', 'empleado'] },
+      { to: '/empleados', label: 'Empleados', icon: UserCog, roles: ['owner'] },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'Finanzas',
+    icon: Wallet,
+    children: [{ to: '/egresos', label: 'Egresos', icon: TrendingDown, roles: ['owner', 'contador'] }],
+  },
 ]
 
 const ROL_LABEL = { owner: 'Dueño', empleado: 'Empleado', contador: 'Contador' }
@@ -44,13 +79,57 @@ const ROL_LABEL = { owner: 'Dueño', empleado: 'Empleado', contador: 'Contador' 
 function Layout() {
   const { user, store, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [open, setOpen] = useState(false)
+  const [slug, setSlug] = useState(store?.slug || null)
 
-  const visibles = MODULOS.filter((m) => m.roles.includes(user?.role))
+  const [groupsOpen, setGroupsOpen] = useState(() => {
+    const inicial = {}
+    for (const entry of MENU) {
+      if (entry.type === 'group') {
+        inicial[entry.label] = entry.children.some((c) => c.to === location.pathname)
+      }
+    }
+    return inicial
+  })
+
+  useEffect(() => {
+    if (store?.slug) {
+      setSlug(store.slug)
+      return
+    }
+    api
+      .get('/store')
+      .then(({ data }) => {
+        if (data?.slug) setSlug(data.slug)
+      })
+      .catch(() => {})
+  }, [store?.slug])
+
+  const visibleMenu = useMemo(() => {
+    return MENU.reduce((acc, entry) => {
+      if (entry.type === 'item') {
+        if (entry.roles.includes(user?.role)) acc.push(entry)
+        return acc
+      }
+      const children = entry.children.filter((c) => c.roles.includes(user?.role))
+      if (children.length > 0) acc.push({ ...entry, children })
+      return acc
+    }, [])
+  }, [user?.role])
+
+  function toggleGroup(label) {
+    setGroupsOpen((prev) => ({ ...prev, [label]: !prev[label] }))
+  }
 
   function salir() {
     logout()
     navigate('/login')
+  }
+
+  function abrirTienda() {
+    if (!slug) return
+    window.open(`/tienda/${slug}`, '_blank', 'noopener,noreferrer')
   }
 
   const nav = (
@@ -68,30 +147,83 @@ function Layout() {
 
       {/* Módulos */}
       <ul className="flex flex-1 flex-col gap-1 px-3">
-        {visibles.map((m) => {
-          const Icon = m.icon
+        {visibleMenu.map((entry) => {
+          if (entry.type === 'item') {
+            const Icon = entry.icon
+            return (
+              <li key={entry.to}>
+                <NavLink
+                  to={entry.to}
+                  end
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+                      isActive ? 'bg-white/10 text-white' : 'text-white/55 hover:bg-white/5 hover:text-white'
+                    }`
+                  }
+                >
+                  <Icon size={17} />
+                  {entry.label}
+                </NavLink>
+              </li>
+            )
+          }
+
+          const GroupIcon = entry.icon
+          const isOpenGroup = !!groupsOpen[entry.label]
+
           return (
-            <li key={m.to}>
-              <NavLink
-                to={m.to}
-                end={m.end}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
-                    m.cta
-                      ? 'bg-esmeralda font-bold text-tinta hover:brightness-110'
-                      : isActive
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/55 hover:bg-white/5 hover:text-white'
-                  }`
-                }
+            <li key={entry.label}>
+              <button
+                type="button"
+                onClick={() => toggleGroup(entry.label)}
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white"
               >
-                <Icon size={17} />
-                {m.label}
-              </NavLink>
+                <GroupIcon size={17} />
+                <span className="flex-1 text-left">{entry.label}</span>
+                {isOpenGroup ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+              </button>
+              <ul
+                className={`flex flex-col gap-1 overflow-hidden transition-all duration-200 ${
+                  isOpenGroup ? 'mt-1 max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                }`}
+              >
+                {entry.children.map((c) => {
+                  const ChildIcon = c.icon
+                  return (
+                    <li key={c.to}>
+                      <NavLink
+                        to={c.to}
+                        onClick={() => setOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-xl py-2 pl-11 pr-4 text-[13px] font-medium transition-colors ${
+                            isActive ? 'bg-white/10 text-white' : 'text-white/55 hover:bg-white/5 hover:text-white'
+                          }`
+                        }
+                      >
+                        <ChildIcon size={15} />
+                        {c.label}
+                      </NavLink>
+                    </li>
+                  )
+                })}
+              </ul>
             </li>
           )
         })}
+
+        {slug && (
+          <li className="mt-2 border-t border-white/10 pt-2">
+            <button
+              type="button"
+              onClick={abrirTienda}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-white/55 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              <ExternalLink size={17} />
+              Tienda online
+            </button>
+          </li>
+        )}
       </ul>
 
       {/* Usuario */}
@@ -110,6 +242,13 @@ function Layout() {
             className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
           >
             <Settings size={16} />
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            title="Volver al inicio"
+            className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <Home size={16} />
           </button>
           <button
             onClick={salir}

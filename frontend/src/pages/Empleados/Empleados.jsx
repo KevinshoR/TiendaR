@@ -95,7 +95,7 @@ function Empleados() {
         </button>
       </div>
 
-      <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-borde bg-white">
+      <div className="x-auto y-hidden rounded-2xl border border-borde bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-ceniza">

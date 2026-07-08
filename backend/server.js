@@ -2,6 +2,8 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const inventoryMovementsRoutes = require('./routes/inventoryMovements.routes');
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
@@ -17,7 +19,47 @@ const { iniciarJobRecordatorios, ejecutarRecordatorios } = require('./jobs/payme
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) {
+      return process.env.NODE_ENV !== 'production'
+        ? callback(null, true)
+        : callback(new Error('No permitido por CORS'));
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('No permitido por CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+const limitadorGeneral = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Demasiadas peticiones, intenta más tarde',
+});
+
+const limitadorAuth = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Demasiados intentos de acceso, intenta más tarde',
+});
+
+app.use(helmet());
+app.use(cors(corsOptions));
+app.use('/api', limitadorGeneral);
 app.use('/api/inventory-movements', inventoryMovementsRoutes);
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -26,7 +68,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'CatalogApp API funcionando' });
 });
 
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', limitadorAuth, authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/customers', customersRoutes);
@@ -36,6 +78,13 @@ app.use('/api/store', storeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/expenses', expensesRoutes);
+
+app.use((err, req, res, next) => {
+  if (err && err.message === 'No permitido por CORS') {
+    return res.status(403).json({ message: 'No permitido por CORS' });
+  }
+  return next(err);
+});
 
 iniciarJobRecordatorios();
 if (process.env.NODE_ENV === 'development' && process.env.TEST_REMINDERS === 'true') {

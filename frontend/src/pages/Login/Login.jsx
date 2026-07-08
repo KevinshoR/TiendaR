@@ -27,7 +27,13 @@ function Login() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-humo px-6">
+    <main className="relative flex min-h-screen items-center justify-center bg-humo px-6">
+      <Link
+        to="/"
+        className="absolute left-6 top-6 text-sm text-ceniza transition-colors hover:text-tinta"
+      >
+        ← Volver al inicio
+      </Link>
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-tinta font-display text-xl font-extrabold text-esmeralda">
