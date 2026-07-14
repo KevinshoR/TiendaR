@@ -15,6 +15,7 @@ const storeRoutes = require('./routes/store.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const publicRoutes = require('./routes/public.routes');
 const expensesRoutes = require('./routes/expenses.routes');
+const accountingRoutes = require('./routes/accounting.routes');
 const { iniciarJobRecordatorios, ejecutarRecordatorios } = require('./jobs/paymentReminders.job');
 
 const app = express();
